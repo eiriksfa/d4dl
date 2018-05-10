@@ -9,6 +9,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import json
 import cv2
+import Image
+import ImageDraw
 
 # Ignore warnings
 import warnings
@@ -66,6 +68,7 @@ class CityScapeDataset(Dataset):
 		img_labelids = io.imread(img_labelids_fn)
 		with open(img_polygon_fn) as f:
 			img_polygon = json.load(f)
+		f.close()
 
 		#creating sample tuple
 		sample = {
@@ -107,6 +110,29 @@ class OnlyRoads(object):
 		gt_instancelds = sample['gt_instancelds']
 		gt_label = sample['gt_label']
 		gt_polygon = sample['gt_polygon']
+
+		imgH = gt_polygon['imgHeight']
+		imgW = gt_polygon['imgWidth']
+		poly_json = gt_polygon['objects']['label'=='road']['polygon']
+		poly_seq = []
+		for i in poly_json:
+			poly_seq.append((i[0] , i[1]))
+
+		poly = Image.new('RGBA',(imgW,imgH), (0,0,0,255))
+		pdraw = ImageDraw.Draw(poly)
+		pdraw.polygon(poly_seq, fill=(255,0,0,255))
+
+		poly2 = np.array(poly)
+
+		return{
+			'image' : image,
+			'gt_color' : poly2,
+			'gt_instancelds' : gt_instancelds,
+			'gt_label' : gt_label,
+			'gt_polygon' : gt_polygon
+		}
+
+
 
 		#TODO make a process to create new groundtruth with only road class
 
@@ -166,7 +192,8 @@ class Rescale(object):
 #------------------------------------------------------------
 
 compose_tf = transforms.Compose([
-								Rescale(1024),
+								Rescale(200),
+								OnlyRoads(),
 								ToTensor()
 								])
 
@@ -182,11 +209,17 @@ for i in range(len(city_dataset)):
 		sample['gt_color'].shape, 
 		sample['gt_instancelds'].shape, 
 		sample['gt_label'].shape)
-	#plt.imshow(sample['gt_color'])
+	plt.imshow(sample['gt_color'])
 	#print(sample['image'])
 	#print(sample['gt_color'])
-	plt.pause(100000)
-	break
+	#print(sample['gt_polygon']['objects']['label'=='road']['polygon'])
+
+
+	plt.pause(1)
+
+	if i==10:
+		break
+	
 
 train_loader = torch.utils.data.DataLoader(city_dataset, 
                                             batch_size=64, shuffle=True,
