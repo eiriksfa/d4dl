@@ -121,7 +121,7 @@ class OnlyRoads(object):
 		return{
 			'image' : image,
 			'gt_color' : poly2,
-			'gt_polygon' : gt_polygon
+			'gt_polygon' : sample['gt_polygon']
 		}
 
 
@@ -260,26 +260,24 @@ compose_tf = transforms.Compose([
 								ToTensor()
 								])
 
-city_dataset = CityScapeDataset( root_dir_img='../../../data/cityscape/leftImg8bit/train',
-								 root_dir_gt='../../../data/cityscape/gtFine/train',
+city_dataset = CityScapeDataset( root_dir_img='../../../data/cityscape-mini/leftImg8bit/train',
+								 root_dir_gt='../../../data/cityscape-mini/gtFine/train',
 								 gt_type='gtFine', transform=compose_tf
 								)
 print(len(city_dataset))
 
-for i in range(len(city_dataset)):
-	sample = city_dataset[i]
-	print(i, sample['image'].shape, 
-		sample['gt_color'].shape) 
-	plt.imshow(sample['image'])
-	plt.pause(1)
-	plt.imshow(sample['gt_color'])
-
-
-	plt.pause(1)
+#for i in range(len(city_dataset)):
+#	sample = city_dataset[i]
+#	print(i, sample['image'].shape, 
+#		sample['gt_color'].shape) 
+#	plt.imshow(sample['image'])
+#	plt.pause(1)
+#	plt.imshow(sample['gt_color'])
+#	plt.pause(1)
 	
 
 train_loader = torch.utils.data.DataLoader(city_dataset, 
-                                            batch_size=64, shuffle=True,
+                                            batch_size=1, shuffle=True,
                                             num_workers=4, pin_memory=True)
 print(len(train_loader))
 
@@ -295,13 +293,16 @@ def imshow(inp, title=None):
     plt.imshow(inp)
     if title is not None:
         plt.title(title)
-    plt.pause(100)  # pause a bit so that plots are updated
+    plt.pause(10)  # pause a bit so that plots are updated
 
 
 # Get a batch of training data
-inputs, classes = next(iter(train_loader))
+#inputs, classes = next(iter(train_loader))
+
+inputs = next(iter(train_loader))
+print(inputs)
 
 # Make a grid from batch
-out = torchvision.utils.make_grid(inputs)
+#out = torchvision.utils.make_grid(inputs)
 
-imshow(output)
+#imshow(output)
