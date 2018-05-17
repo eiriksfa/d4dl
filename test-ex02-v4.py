@@ -2,7 +2,8 @@ from __future__ import print_function, division
 import os
 import torch
 import pandas as pd
-from skimage import io, transform
+from skimage import io, transform, filters, exposure
+from skimage.util import random_noise
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
@@ -187,21 +188,6 @@ class Rotate(object):
         		'gt_color' : gt_col,
         		'gt_polygon': gt_polygon}
 
-class FlipUD(object):
-    """Flip the image upside down"""
-
-    def __call__(self, sample):
-        image = sample['image'] 
-        gt_color = sample['gt_color']
-        gt_polygon = sample['gt_polygon']
-
-        img = np.flipud(image).copy()
-        gt_col = np.flipud(gt_color).copy()
-
-
-        return {'image': img,
-        		'gt_color' : gt_col,
-        		'gt_polygon': gt_polygon}
 
 class FlipLR(object):
     """Flip the image left to right"""
@@ -219,14 +205,58 @@ class FlipLR(object):
         		'gt_color' : gt_col,
         		'gt_polygon': gt_polygon}
 
+class Blur(object):
+    """Blur an image, simulation of rainy or foggy weather.
+
+    Args:
+        blur_val (int): Desired blur value.
+    """
+
+    def __init__(self, blur_val):
+        assert isinstance(blur_val, (int))
+        self.blur_val = blur_val
+
+    def __call__(self, sample):
+        image = sample['image'] 
+        gt_color = sample['gt_color']
+        gt_polygon = sample['gt_polygon']
+
+        img = filters.gaussian(image, sigma=self.blur_val)
+
+        return {'image': img,
+        		'gt_color' : gt_color,
+        		'gt_polygon': gt_polygon}
+
+class ContrastSet(object):
+    """Change a contrast of an image, simulation of very light/dark condition.
+
+    Args:
+        val (tuple): Desired stretch range of the distribution.
+    """
+
+    def __init__(self, val):
+        assert isinstance(val, (tuple))
+        self.val = val
+
+    def __call__(self, sample):
+        image = sample['image'] 
+        gt_color = sample['gt_color']
+        gt_polygon = sample['gt_polygon']
+
+        img = exposure.rescale_intensity(image,(self.val[0],self.val[1]))
+
+        return {'image': img,
+        		'gt_color' : gt_color,
+        		'gt_polygon': gt_polygon}
 #------------------------------------------------------------
 
 compose_tf = transforms.Compose([
 								OnlyRoads(),
 								Rescale(100),
 								Rotate(0),
-								FlipUD(),
 								FlipLR(),
+								Blur(1),
+								ContrastSet((0,3)),
 								ToTensor()
 								])
 
