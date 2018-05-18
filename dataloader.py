@@ -34,7 +34,7 @@ class DataLoader:
 # TODO: Test out different values
 transforms = [
     {
-        'chance': 0.2,
+        'chance': 0.7,
         'f': utility.rotate,
         'vf': lambda: np.random.randint(-60, 60)
     },
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     loader = DataLoader('', transforms=transforms, use_torch=False)
     t = time.time()
-    images = loader.get_image(n=64)
+    images = loader.get_image(n=4)
     t2 = time.time()
     print(t2-t)  # 25 seconds to get 64 images is much, should probably do something about this,
     # first check if significant compared to training time
