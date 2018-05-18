@@ -3,11 +3,11 @@ import pandas as pd
 from pandas.io import sql
 import sqlalchemy as sa
 from pathlib import Path
+from skimage import io, transform, filters, exposure
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import json
-
 
 labels = {'road': 0,
           'sidewalk': 1,
@@ -51,7 +51,6 @@ labels = {'road': 0,
 
 road = [0]
 background = [1,2,3,4,5,6,7,8,10,11,12,13,14,15,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38]
-
 
 
 def import_image(imgpath, name, width, height, engine, dtype=1):
@@ -126,32 +125,57 @@ def import_labels(imgpath, labelpath, engine, polyname='gtFine_polygons', imgnam
                 import_polygon(iid, label, polygon, engine)
 
 
-def get_image(imageid, engine):
-    res = sql.execute('SELECT width, height FROM IMAGES WHERE ID=?', engine, params=[(imageid)])
-    i = res.first()
-    if i is None:
+def get_output_image(imageid, engine, size=None):
+    if size is None:
+        res = sql.execute('SELECT width, height FROM IMAGES WHERE ID=?', engine, params=[(imageid)])
+        i = res.first()
+        if i is None:
+            res.close()
+            return
+        w, h = i[0], i[1]
         res.close()
-        return
-    w, h = i[0], i[1]
-    res.close()
+        size = (w, h)
+    w, h = size[0], size[1]
     res = sql.execute('SELECT labelid, polygon FROM POLYGON WHERE imageid=? ', engine, params=[(imageid)])
     image = np.zeros((h, w, 3), np.uint8)
 
     for r in res:
         color = (0,0,0)
-        print(type(r[1]))
         arr = json.loads(r[1])
-        narr = []
-        for i in range(len(arr)):
-            p = [arr[i][1], arr[i][0]]
-            narr.append(p)
-        print(narr)
-        narr = np.array(narr)
+        arr = np.array(arr, np.int32)
         if r[0] in road:
             color = (255, 0, 0)
         if r[0] in background:
             color = (0, 0, 255)
-        cv2.fillPoly(image, narr, color)
+        arr = arr.reshape((-1, 1, 2))
+        cv2.fillPoly(image, [arr], color)
+    return image
+
+
+def get_input_image(path):
+    p = Path(path)
+    img = io.imread(p)
+    return img
+
+
+def get_imageset(engine, root, number=1, type=1, random=True):
+    if random:
+        s = 'SELECT * FROM Images WHERE TYPE=? ORDER BY RANDOM() LIMIT ?;'
+    else:
+        s = 'SELECT * FROM Images WHERE TYPE=? LIMIT ? WHERE TYPE=?;'
+    res = sql.execute(s, engine, params=[(type, number)])
+    resl = []
+    for r in res:
+        id = r[0]
+        path = root + r[1]
+        size = (r[4], r[5])
+        resl.append((id, path, size))
+    resi = []
+    for r in resl:
+        img = get_input_image(r[1])
+        out = get_output_image(r[0], engine, r[2])
+        resi.append((img, out))
+    return resi
 
 
 def build_labels(engine):
@@ -162,18 +186,110 @@ def build_labels(engine):
     print(labels)
 
 
+def rescale(images, output_size):
+    """Rescale the image in a sample to a given size.
+
+    Args:
+        output_size (tuple or int): Desired output size. If tuple, output is
+            matched to output_size. If int, smaller of image edges is matched
+            to output_size keeping aspect ratio the same.
+    """
+
+    image = images[0]
+    gt_color = images[1]
+
+    h, w = image.shape[:2]
+    if isinstance(output_size, int):
+        if h > w:
+            new_h, new_w = output_size * h / w, output_size
+        else:
+            new_h, new_w = output_size, output_size * w / h
+    else:
+        new_h, new_w = output_size
+
+    new_h, new_w = int(new_h), int(new_w)
+
+    img = transform.resize(image, (new_h, new_w), order=0)
+    gt_col = transform.resize(gt_color, (new_h, new_w), order=0)
+
+    return img, gt_col
+
+
+def rotate(images, val):
+    """Rotate an image to the desired angle.
+
+    Args:
+        rotate_val (int): Desired rotation value, in degree.
+    """
+
+    image = images[0]
+    gt_color = images[1]
+
+    img = transform.rotate(image, val, resize=True, order=0)
+    gt_col = transform.rotate(gt_color, val, resize=True, order=0)
+
+    return img, gt_col
+
+
+def flip_lr(images):
+    """Flip the image left to right"""
+
+    image = images[0]
+    gt_color = images[1]
+
+    img = np.fliplr(image).copy()
+    gt_col = np.fliplr(gt_color).copy()
+
+    return img, gt_col
+
+
+def blur(images, val):
+    """Blur an image, simulation of rainy or foggy weather.
+
+    Args:
+        blur_val (int): Desired blur value.
+    """
+
+    image = images[0]
+    gt_color = images[1]
+    img = filters.gaussian(image, sigma=val)
+
+    return img, gt_color
+
+
+def contrast_set(images, val):
+    """Change a contrast of an image, simulation of very light/dark condition.
+
+        Args:
+            val (tuple): Desired stretch range of the distribution.
+            images (tuple): input and output images
+        """
+    image = images[0]
+    gt_color = images[1]
+    if val is None:
+        img = exposure.rescale_intensity(image)
+    else:
+        img = exposure.rescale_intensity(image, (val[0], val[1]))
+
+    return img, gt_color
+
+
 if __name__ == '__main__':
-    lpath = Path('E:/gtFine_trainvaltest/gtFine/train/')
-    ipath = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train')
-    engine = sa.create_engine('sqlite:///labels.db')
-
-    # ids = import_image('test', 'test2', 2, 2, engine)
-    #for r in ids:
-    #    print(r)
-    #import_labels(ipath, lpath, engine)
-    img = get_image(31, engine)
-    plt.imshow(img)
-
-    #build_labels(engine)
-
-    print('FINISHED')
+    pass
+    # lpath = Path('E:/gtFine_trainvaltest/gtFine/train/')
+    # ipath = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train')
+    # engine = sa.create_engine('sqlite:///labels.db')
+    #
+    # # ids = import_image('test', 'test2', 2, 2, engine)
+    # #for r in ids:
+    # #    print(r)
+    # #import_labels(ipath, lpath, engine)
+    # #img = get_image(79, engine)
+    #
+    # engine.dispose()
+    # plt.imshow(img)
+    # plt.show()
+    #
+    # #build_labels(engine)
+    #
+    # print('FINISHED')
