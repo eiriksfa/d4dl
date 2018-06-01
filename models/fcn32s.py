@@ -8,6 +8,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
+def get_upsampling_weight(in_channels, out_channels, kernel_size):
+    """Make a 2D bilinear kernel suitable for upsampling"""
+    factor = (kernel_size + 1) // 2
+    if kernel_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = np.ogrid[:kernel_size, :kernel_size]
+    filt = (1 - abs(og[0] - center) / factor) * \
+           (1 - abs(og[1] - center) / factor)
+    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size),
+                      dtype=np.float64)
+    weight[range(in_channels), range(out_channels), :, :] = filt
+    return torch.from_numpy(weight).float()
+
+
 class FCN32s(nn.Module):
 
     def __init__(self):
@@ -26,7 +43,11 @@ class FCN32s(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.ConvTranspose2d):
-                pass  # Bilinear (No changes?)
+                # Bilinear (No changes?)
+                assert m.kernel_size[0] == m.kernel_size[1]
+                initial_weight = get_upsampling_weight(
+                    m.in_channels, m.out_channels, m.kernel_size[0])
+                m.weight.data.copy_(initial_weight)
 
     def forward(self, x):
         h = self.layers(x)
