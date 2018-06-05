@@ -60,7 +60,7 @@ class FCN32s(nn.Module):
         # .double needed, probably because of the use of numpy arrays (?)
         layers = [
                     # Conv1 # TODO: Padding?
-                    nn.Conv2d(3, 32, kernel_size=3, padding=100), nn.BatchNorm2d(32), nn.ReLU(inplace=True),
+                    nn.Conv2d(3, 32, kernel_size=3, padding=1), nn.BatchNorm2d(32), nn.ReLU(inplace=True),
                     nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.BatchNorm2d(32), nn.ReLU(inplace=True),
                     nn.MaxPool2d(2, stride=2, ceil_mode=True),  # 1/2
                     # Conv2
@@ -83,13 +83,11 @@ class FCN32s(nn.Module):
                     nn.Conv2d(256, 256, kernel_size=3, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
                     nn.MaxPool2d(2, stride=2, ceil_mode=True),  # 1/32
                     # fc6
-                    nn.Conv2d(256, 2048, 7), nn.ReLU(inplace=True), nn.Dropout2d(),
+                    nn.Conv2d(256, 2048, 3, stride=1, padding=1), nn.ReLU(inplace=True), nn.Dropout2d(),
                     # fc7
-                    nn.Conv2d(2048, 2048, 7), nn.ReLU(inplace=True), nn.Dropout2d(),
-                    # fc8
-                    nn.Conv2d(2048, n_class, 1),
+                    nn.Conv2d(2048, n_class, 1, stride=1),
                     # Transpose convolution
-                    nn.ConvTranspose2d(n_class, n_class, 64, stride=32, bias=False)
+                    nn.ConvTranspose2d(n_class, n_class, 32, stride=32, bias=False)
 
                     # nn.AvgPool2d(kernel_size=1, stride=1)
                  ]
@@ -127,8 +125,8 @@ if __name__ == '__main__':
     net = net.to(device)
     net = torch.nn.DataParallel(net)
 
-    img = io.imread('C:/Users/eirik/PycharmProjects/d4dl2/testimg/2.png')
-    target = io.imread('C:/Users/eirik/PycharmProjects/d4dl2/testimg/1.png')
+    img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/2.png')
+    target = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/1.png')
     img, target = tf(img), tf(target)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
