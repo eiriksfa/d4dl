@@ -21,20 +21,12 @@ class Transformer:
                                 self._adjust_gamma,
                                 self._adjust_saturation,
                                 self._rotate,
-                                self._to_label,
                                 self._to_tensor]
 
     def __call__(self, imgset):
         for f in self.transformations:
             imgset = f(imgset)
         return imgset
-
-    @staticmethod
-    def _to_label(imgset):
-        print(imgset[1].shape)
-        labelimg = imgset[1]  # TODO: Change this to labelimage
-        print(labelimg.shape)
-        return imgset[0], labelimg
 
     @staticmethod
     def _to_pil(imgset):
@@ -115,22 +107,6 @@ class Transformer:
 #         engine.dispose()
 #         return results
 
-class ImageSet2(Dataset):
-
-    def __init__(self):
-        self.transformer = Transformer()
-        self.img = imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/316.png')
-        self.target = imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/317.png')
-
-    def __len__(self):
-        return 1
-
-    def _process_image(self):
-        return self.transformer((self.img, self.target))
-
-    def __getitem__(self, item):
-        return self._process_image()
-
 
 class ImageSet(Dataset):
 
@@ -176,4 +152,4 @@ if __name__ == '__main__':
     plt.imshow(img[0].numpy().transpose((1,2,0)))
     plt.show()
     plt.imshow(img[1].numpy().transpose((1,2,0)))
-    plt.show()
+plt.show()
