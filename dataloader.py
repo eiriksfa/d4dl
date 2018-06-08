@@ -107,25 +107,6 @@ class DataLoader:
         return results
 
 
-# TODO: Test out different values
-transformations = [
-    {
-        'chance': 0.7,
-        'f': utility.rotate,
-        'vf': lambda: np.random.randint(-60, 60)
-    },
-    {
-        'chance': 0.2,
-        'f': utility.contrast_set,
-        'vf': lambda: None
-    },
-    {
-        'chance': 0.2,
-        'f': utility.blur,
-        'vf': lambda: 1
-    }
-]
-
 if __name__ == '__main__':
 
     loader = DataLoader()
