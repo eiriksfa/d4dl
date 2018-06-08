@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn as nn
 from torchvision import transforms
@@ -7,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from distutils.version import LooseVersion
 import torch.nn.functional as F
+from dataloader import ImageSet, ImageSet2
+from torch.utils.data import DataLoader
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
 def get_upsampling_weight(in_channels, out_channels, kernel_size):
@@ -166,21 +169,22 @@ class FCN32s(nn.Module):
 
 
 # Functions used for testing the model (consider moving into a util file or something, for use in all models)
-def train(net, optimizer, criterion, device, data, target):
+def train(net, optimizer, criterion, device, train):
     net.train()
-    # Move the input and target data on the GPU
-    data, target = data.to(device), target.to(device)
-    # Zero out gradients from previous step
-    optimizer.zero_grad()
-    # Forward pass of the neural net
-    output = net(data)
-    # Calculation of the loss function
-    loss = criterion(output, target.squeeze()) 
-    #loss = cross_entropy2d(output, target.squeeze()) #2D version
-    # Backward pass (gradient computation)
-    loss.backward()
-    # Adjusting the parameters according to the loss function
-    optimizer.step()
+    for batch_idx, (data, target) in enumerate(train):
+        # Move the input and target data on the GPU
+        data, target = data.to(device), target.to(device)
+        # Zero out gradients from previous step
+        optimizer.zero_grad()
+        # Forward pass of the neural net
+        output = net(data)
+        # Calculation of the loss function
+        loss = criterion(output, target)
+        #loss = cross_entropy2d(output, target.squeeze()) #2D version
+        # Backward pass (gradient computation)
+        loss.backward()
+        # Adjusting the parameters according to the loss function
+        optimizer.step()
 
 
 def load_images():
@@ -197,18 +201,23 @@ if __name__ == '__main__':
     net = net.to(device)
     net = torch.nn.DataParallel(net)
 
-    img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/2.png')
-    target = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/1.png')
+    # ts = ImageSet()
+    # dl = DataLoader(ts, batch_size=4)
 
-    img, target = tf(img), tf(target)
-    img.unsqueeze_(0)
-    target.unsqueeze_(0)
-    print(img.shape)
-    print(target.shape)
-    print(img.size())
+    ts = ImageSet2()
+    dl = DataLoader(ts, batch_size=1)
+
+    #img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/2.png')
+    #target = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/1.png')
+
+    # img, target = tf(img), tf(target)
+    # img.unsqueeze_(0)
+    # #target.unsqueeze_(0)
+    # print(img.shape)
+    # print(target.shape)
     #criterion = nn.CrossEntropyLoss() // using 2d version instead
     criterion = nn.NLLLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
     for e in range(1, 30):
-        train(net, optimizer, criterion, device, img, target.long())
+        train(net, optimizer, criterion, device, dl)
