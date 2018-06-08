@@ -176,7 +176,7 @@ def train(net, optimizer, criterion, device, data, target):
     # Forward pass of the neural net
     output = net(data)
     # Calculation of the loss function
-    loss = criterion(output, target) 
+    loss = criterion(output, target.squeeze()) 
     #loss = cross_entropy2d(output, target.squeeze()) #2D version
     # Backward pass (gradient computation)
     loss.backward()
@@ -203,12 +203,13 @@ if __name__ == '__main__':
 
     img, target = tf(img), tf(target)
     img.unsqueeze_(0)
-    #target.unsqueeze_(0)
+    target.unsqueeze_(0)
     print(img.shape)
     print(target.shape)
+    print(img.size())
     #criterion = nn.CrossEntropyLoss() // using 2d version instead
     criterion = nn.NLLLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
     for e in range(1, 30):
-        train(net, optimizer, criterion, device, img, target)
+        train(net, optimizer, criterion, device, img, target.long())
