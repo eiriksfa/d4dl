@@ -1,13 +1,12 @@
-import sqlite3 as sql
 import pandas as pd
 from pandas.io import sql
 import sqlalchemy as sa
 from pathlib import Path
-from skimage import io, transform, filters, exposure
+from skimage import transform, filters, exposure
+from scipy.misc import imsave
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
-import json
+import os
 
 labels = {'road': 0,
           'sidewalk': 1,
@@ -47,13 +46,21 @@ labels = {'road': 0,
           'rail track': 35,
           'train': 36,
           'motorcyclegroup': 37,
-          'ridergroup': 38}
+          'ridergroup': 38,
+          'truckgroup': 39}
 
-road = [0]
-background = [1,2,3,4,5,6,7,8,10,11,12,13,14,15,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38]
+road = [0, 16]  # Ground?
+background = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+              32, 33, 34, 35, 36, 37, 38, 39]
 
 
-def import_image(imgpath, name, width, height, engine, dtype=1):
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def import_image(img, name, width, height, engine, dtype=1):
     """
     Import a single image into the database (without labels)
     :param imgpath: path of image
@@ -64,118 +71,73 @@ def import_image(imgpath, name, width, height, engine, dtype=1):
     iid = res.first()[0]
     iid = 0 if iid is None else iid + 1
     res.close()
-    sql.execute('INSERT INTO Images (ID, Path, Name, Type, Width, Height) VALUES (?, ?, ?, ?, ?, ?)',
-                       engine, params=[(iid, str(imgpath), name, dtype, int(width), int(height))])
+    sql.execute('INSERT INTO Images (ID, Image, IName, IType, Width, Height) VALUES (?, ?, ?, ?, ?, ?)',
+                engine, params=[(iid, str(img), name, dtype, int(width), int(height))])
     return iid
 
 
-def import_polygon(imageid, label, polygon, engine):
-    labelid = get_label_id(label, engine)
-    sql.execute('INSERT INTO Polygon (ImageID, LabelID, Polygon) VALUES (?, ?, ?)',
-                engine, params=[(imageid, labelid, str(polygon))])
-
-
-def import_label(label, engine):
-    res = sql.execute('SELECT ID FROM LABELS WHERE (Type=?)', engine, params=[(label)])
-    r = res.first()
-    if r is not None:  # Check if multiple? Should be unique
-        r = r[0]
-        return r
-    res.close()
+def import_label_image(image, path, imgid, ltid, engine):
+    path = path.joinpath(str(imgid) + '.png')
+    ensure_dir(path)
+    imsave(path, image)
     res = sql.execute('select MAX(ID) from Labels', engine)
     iid = res.first()[0]
     iid = 0 if iid is None else iid + 1
     res.close()
-    sql.execute('INSERT INTO Labels (ID, Type) VALUES (?, ?)',
-                engine, params=[(iid, label)])
+    sql.execute('INSERT INTO Labels (ID, Image, IID, LTID) VALUES (?, ?, ?, ?)',
+                engine, params=[(iid, str(path), imgid, ltid)])
     return iid
 
 
-def get_label_id(label, engine):
-    if label in labels:
-        return labels[label]
-    else:
-        lid = import_label(label, engine)
-        labels[label] = lid
-        return lid
-
-
-def import_labels(imgpath, labelpath, engine, polyname='gtFine_polygons', imgname='leftImg8bit', dtype=1):
-    """
-    Imports image/label mapping to database, based on a folder of images and a folder of labels
-    NB: Not threadsafe!
-    :param imgpath: path to the image root
-    :param labelpath: path to the label root
-    :param polyname: Relative polygon file name
-    :param imgname: Relative image file name
-    :param dtype: Type of data (train=1, validation=2, test=3)
-    :return:
-    """
-    for directory in [pth for pth in imgpath.iterdir()]:
-        labeldir = labelpath.joinpath(directory.stem)
-        for img in [d for d in directory.iterdir()]:
-            jsonn = img.stem.replace(imgname, polyname) + '.json'
-            jsonp = labeldir.joinpath(jsonn)
-            js = pd.read_json(jsonp)
-            h, w = js['imgHeight'][0], js['imgWidth'][0]
-            iid = import_image(img, img.stem, w, h, engine, dtype)
-            for item in js.itertuples(index=True):
-                label = getattr(item, 'objects')['label']
-                polygon = getattr(item, 'objects')['polygon']
-                import_polygon(iid, label, polygon, engine)
-
-
-def get_output_image(imageid, engine, size=None):
-    if size is None:
-        res = sql.execute('SELECT width, height FROM IMAGES WHERE ID=?', engine, params=[(imageid)])
-        i = res.first()
-        if i is None:
-            res.close()
-            return
-        w, h = i[0], i[1]
-        res.close()
-        size = (w, h)
-    w, h = size[0], size[1]
-    res = sql.execute('SELECT labelid, polygon FROM POLYGON WHERE imageid=? ', engine, params=[(imageid)])
+def process_label_image(path):
+    js = pd.read_json(path)
+    h, w = js['imgHeight'][0], js['imgWidth'][0]
     image = np.zeros((h, w, 3), np.uint8)
-
-    for r in res:
-        color = (0,0,0)
-        arr = json.loads(r[1])
+    for f in js['objects']:
+        color = (0, 0, 0)
+        arr = f['polygon']
         arr = np.array(arr, np.int32)
-        if r[0] in road:
-            color = (255, 0, 0)
-        if r[0] in background:
+        label = f['label']
+        if labels[label] in road:
+            color = (0, 255, 0)
+        if labels[label] in background:
             color = (0, 0, 255)
-        arr = arr.reshape((-1, 1, 2))
+        # arr = arr.reshape((-1, 1, 2))
         cv2.fillPoly(image, [arr], color)
-    return image
+    return image, (w, h)
 
 
-def get_input_image(path):
-    p = Path(path)
-    img = io.imread(p)
-    return img
+def import_images_sub(imgpath, labelpath, labelimagepath, engine, polyname='gtFine_polygons', imgname='leftImg8bit',
+                      dtype=1):
+    labeldir = labelpath  # .joinpath(imgpath.stem)
+    for img in [d for d in imgpath.iterdir()]:
+        jsonn = img.stem.replace(imgname, polyname) + '.json'
+        jsonp = labeldir.joinpath(jsonn)
+        labelimg, (w, h) = process_label_image(jsonp)
+        iid = import_image(img, img.stem, w, h, engine)  # img, name, width, height, engine
+        import_label_image(labelimg, labelimagepath, iid, 1, engine)
 
 
-def get_imageset(engine, root, number=1, type=1, random=True):
+def import_images(imgpath, labelpath, engine, polyname='gtFine_polygons', imgname='leftImg8bit', dtype=1):
+    pass
+
+
+def get_imageset(engine, number=1, type=1, random=True):
     if random:
-        s = 'SELECT * FROM Images WHERE TYPE=? ORDER BY RANDOM() LIMIT ?;'
+        s = 'SELECT Images.Image as IImage, Images.Width, Images.Height, Images.ID, Labels.Image as LImage FROM Images ' \
+            'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=? ORDER BY RANDOM() LIMIT ?'
     else:
-        s = 'SELECT * FROM Images WHERE TYPE=? LIMIT ? WHERE TYPE=?;'
+        s = 'SELECT Images.Image as IImage, Images.Width, Images.Height, Images.ID, Labels.Image as LImage FROM Images ' \
+            'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=? LIMIT ?'
     res = sql.execute(s, engine, params=[(type, number)])
     resl = []
     for r in res:
-        id = r[0]
-        path = root + r[1]
-        size = (r[4], r[5])
-        resl.append((id, path, size))
-    resi = []
-    for r in resl:
-        img = get_input_image(r[1])
-        out = get_output_image(r[0], engine, r[2])
-        resi.append((img, out))
-    return resi
+        p1 = r[0]
+        size = (r[1], r[2])
+        iid = r[3]
+        p2 = r[4]
+        resl.append((iid, p1, p2, size))
+    return resl
 
 
 def build_labels(engine):
@@ -275,21 +237,33 @@ def contrast_set(images, val):
 
 
 if __name__ == '__main__':
-    pass
+    # pass
     # lpath = Path('E:/gtFine_trainvaltest/gtFine/train/')
     # ipath = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train')
-    # engine = sa.create_engine('sqlite:///labels.db')
     #
-    # # ids = import_image('test', 'test2', 2, 2, engine)
-    # #for r in ids:
-    # #    print(r)
-    # #import_labels(ipath, lpath, engine)
-    # #img = get_image(79, engine)
-    #
+
+    # ids = import_image('test', 'test2', 2, 2, engine)
+    # for r in ids:
+    #    print(r)
+    # import_labels(ipath, lpath, engine)
+    # img = get_image(79, engine)
+
     # engine.dispose()
     # plt.imshow(img)
     # plt.show()
-    #
-    # #build_labels(engine)
-    #
-    # print('FINISHED')
+
+    # build_labels(engine)
+    engine = sa.create_engine('sqlite:///data.db')
+    l = ['weimar', 'zurich']
+    for d in l:
+        path = Path('E:/gtFine_trainvaltest/gtFine/train/' + d + '/')
+        p2 = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train/' + d + '/')
+        p3 = Path('E:/labelimgs/train/' + d + '/')
+        import_images_sub(p2, path, p3, engine)
+    # img = process_label_image(path)
+    # img2 = process_input_image(p2)
+    # plt.imshow(img)
+    # plt.show()
+    # plt.imshow(img2)
+    # plt.show()
+    print('FINISHED')
