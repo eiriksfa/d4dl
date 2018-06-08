@@ -66,6 +66,8 @@ class SimpleNet(nn.Module):
 def train(epoch, net, train, optimizer, criterion, device):
     net.train()
     for batch_idx, (data, target) in enumerate(train):
+        print(data)
+        print(target)
         # Move the input and target data on the GPU
         data, target = data.to(device), target.to(device)
         # Zero out gradients from previous step
@@ -197,7 +199,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    for e in range(1, 7):
+    for e in range(1, 1):
         train(e, net, ts_loader, optimizer, criterion, device)
         a = test(net, vs_loader, device, criterion)
         accuracy.append(a)

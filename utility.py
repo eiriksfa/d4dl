@@ -2,7 +2,6 @@ import pandas as pd
 from pandas.io import sql
 import sqlalchemy as sa
 from pathlib import Path
-from skimage import transform, filters, exposure
 from scipy.misc import imsave
 import numpy as np
 import cv2
@@ -122,21 +121,15 @@ def import_images(imgpath, labelpath, engine, polyname='gtFine_polygons', imgnam
     pass
 
 
-def get_imageset(engine, number=1, type=1, random=True):
-    if random:
-        s = 'SELECT Images.Image as IImage, Images.Width, Images.Height, Images.ID, Labels.Image as LImage FROM Images ' \
-            'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=? ORDER BY RANDOM() LIMIT ?'
-    else:
-        s = 'SELECT Images.Image as IImage, Images.Width, Images.Height, Images.ID, Labels.Image as LImage FROM Images ' \
-            'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=? LIMIT ?'
-    res = sql.execute(s, engine, params=[(type, number)])
+def get_imageset(engine, type=1):
+    s = 'SELECT Images.Image as IImage, Labels.Image as LImage FROM Images ' \
+        'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=?'
+    res = sql.execute(s, engine, params=[type])
     resl = []
     for r in res:
         p1 = r[0]
-        size = (r[1], r[2])
-        iid = r[3]
-        p2 = r[4]
-        resl.append((iid, p1, p2, size))
+        p2 = r[1]
+        resl.append((p1, p2))
     return resl
 
 
@@ -149,33 +142,13 @@ def build_labels(engine):
 
 
 if __name__ == '__main__':
-    # pass
-    # lpath = Path('E:/gtFine_trainvaltest/gtFine/train/')
-    # ipath = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train')
-    #
-
-    # ids = import_image('test', 'test2', 2, 2, engine)
-    # for r in ids:
-    #    print(r)
-    # import_labels(ipath, lpath, engine)
-    # img = get_image(79, engine)
-
-    # engine.dispose()
-    # plt.imshow(img)
-    # plt.show()
-
     # build_labels(engine)
     engine = sa.create_engine('sqlite:///data.db')
+
     l = ['weimar', 'zurich']
     for d in l:
         path = Path('E:/gtFine_trainvaltest/gtFine/train/' + d + '/')
         p2 = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train/' + d + '/')
         p3 = Path('E:/labelimgs/train/' + d + '/')
         import_images_sub(p2, path, p3, engine)
-    # img = process_label_image(path)
-    # img2 = process_input_image(p2)
-    # plt.imshow(img)
-    # plt.show()
-    # plt.imshow(img2)
-    # plt.show()
     print('FINISHED')

@@ -2,6 +2,7 @@ import utility
 import sqlalchemy as sa
 import numpy as np
 from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader, Dataset
 import time
 import torch
 from pathlib import Path
@@ -81,10 +82,44 @@ class Transformer:
         return func.rotate(imgset[0], v), func.rotate(imgset[1], v)
 
 
-class DataLoader:
+# class DataLoader:
+#
+#     def __init__(self):
+#         self.transformer = Transformer()
+#
+#     @staticmethod
+#     def _get_image(path):
+#         p = Path(path)
+#         img = imread(p)
+#         return img
+#
+#     def _process_imageset(self, imageset):
+#         (iid, p1, p2, size) = imageset
+#         image = self._get_image(p1)
+#         target = self._get_image(p2)
+#         return self.transformer((image, target))
+#
+#     def get_imageset(self, n=64, workers=9, random=True):
+#         engine = sa.create_engine('sqlite:///data.db')
+#         images = utility.get_imageset(engine, number=n, random=random)
+#         with ThreadPoolExecutor(max_workers=workers) as executor:
+#             results = executor.map(self._process_imageset, images)
+#         engine.dispose()
+#         return results
+
+
+class ImageSet(Dataset):
 
     def __init__(self):
         self.transformer = Transformer()
+        self._build_dataset()
+
+    def _build_dataset(self):
+        engine = sa.create_engine('sqlite:///../data.db')
+        self.data = utility.get_imageset(engine)
+
+    def __len__(self):
+        return len(self.data)
 
     @staticmethod
     def _get_image(path):
@@ -92,31 +127,29 @@ class DataLoader:
         img = imread(p)
         return img
 
-    def _process_imageset(self, imageset):
-        (iid, p1, p2, size) = imageset
+    def _process_image(self, image):
+        (p1, p2) = image
         image = self._get_image(p1)
         target = self._get_image(p2)
         return self.transformer((image, target))
 
-    def get_imageset(self, n=64, workers=9, random=True):
-        engine = sa.create_engine('sqlite:///data.db')
-        images = utility.get_imageset(engine, number=n, random=random)
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            results = executor.map(self._process_imageset, images)
-        engine.dispose()
-        return results
+    def __getitem__(self, item):
+        image = self._process_image(self.data[item])
+        return image
 
 
 if __name__ == '__main__':
+    ts = ImageSet()
+    #loader = DataLoader(ts, batch_size=1)
+    print(ts.__len__())
+    print(ts.__getitem__(1))
 
-    loader = DataLoader()
     t = time.time()
-    images = loader.get_imageset(n=64)
     t2 = time.time()
-    print(t2-t)
 
-    for img in images:
-        plt.imshow(img[0].numpy().transpose((1,2,0)))
-        plt.show()
-        plt.imshow(img[1].numpy().transpose((1,2,0)))
-        plt.show()
+    img = ts.__getitem__(5)
+    print(t2 - t)
+    plt.imshow(img[0].numpy().transpose((1,2,0)))
+    plt.show()
+    plt.imshow(img[1].numpy().transpose((1,2,0)))
+    plt.show()
