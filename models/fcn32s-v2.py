@@ -6,7 +6,8 @@ import torch.optim as optim
 from skimage import io
 import numpy as np
 import matplotlib.pyplot as plt
-
+from distutils.version import LooseVersion
+import torch.nn.functional as F
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
 def get_upsampling_weight(in_channels, out_channels, kernel_size):
@@ -24,12 +25,35 @@ def get_upsampling_weight(in_channels, out_channels, kernel_size):
     weight[range(in_channels), range(out_channels), :, :] = filt
     return torch.from_numpy(weight).float()
 
+# from https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/trainer.py
+def cross_entropy2d(input, target, weight=None, size_average=True):
+    # input: (n, c, h, w), target: (n, h, w)
+    n, c, h, w = input.size()
+    # log_p: (n, c, h, w)
+    if LooseVersion(torch.__version__) < LooseVersion('0.3'):
+        # ==0.2.X
+        log_p = F.log_softmax(input)
+    else:
+        # >=0.3
+        log_p = F.log_softmax(input, dim=1)
+    # log_p: (n*h*w, c)
+    log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous()
+    print(log_p.size())
+    log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0]
+    log_p = log_p.view(-1, c)
+    # target: (n*h*w,)
+    mask = target >= 0
+    target = target[mask]
+    loss = F.nll_loss(log_p, target, weight=weight, size_average=False)
+    if size_average:
+        loss /= mask.data.sum()
+    return loss
 
 class FCN32s(nn.Module):
     def __init__(self, n_class=3):
         super(FCN32s, self).__init__()
         # conv1
-        self.conv1_1 = nn.Conv2d(3, 32, 3, padding=100)
+        self.conv1_1 = nn.Conv2d(3, 32, 3, padding=1)
         self.relu1_1 = nn.ReLU(inplace=True)
         self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
         self.relu1_2 = nn.ReLU(inplace=True)
@@ -67,7 +91,7 @@ class FCN32s(nn.Module):
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
         # fc6
-        self.fc6 = nn.Conv2d(256, 2048, 7)
+        self.fc6 = nn.Conv2d(256, 2048, 1)
         self.relu6 = nn.ReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
@@ -78,6 +102,7 @@ class FCN32s(nn.Module):
 
         self.score_fr = nn.Conv2d(2048, n_class, 1)
         self.upscore = nn.ConvTranspose2d(n_class, n_class, 32, stride=32, bias=False)
+        #self.upscore = nn.UpsamplingBilinear2d(scale_factor=2)
 
         self._init_weights()
 
@@ -96,16 +121,12 @@ class FCN32s(nn.Module):
                 m.weight.data.copy_(initial_weight)
 
     def forward(self, x):
-        h = self.layers(x)
-        # TODO: Debug/Test Resize etc
-        h = h[:, :, 19:19 + x.size()[2], 19:19 + x.size()[3]].contiguous()
-        return h
-
-    def forward(self, x):
         h = x
+        print(h.shape)
         h = self.relu1_1(self.conv1_1(h))
         h = self.relu1_2(self.conv1_2(h))
         h = self.pool1(h)
+        print(h.shape)
 
         h = self.relu2_1(self.conv2_1(h))
         h = self.relu2_2(self.conv2_2(h))
@@ -125,17 +146,22 @@ class FCN32s(nn.Module):
         h = self.relu5_2(self.conv5_2(h))
         h = self.relu5_3(self.conv5_3(h))
         h = self.pool5(h)
+        print(h.shape)
 
         h = self.relu6(self.fc6(h))
         h = self.drop6(h)
+        print(h.shape)
 
         h = self.relu7(self.fc7(h))
         h = self.drop7(h)
+        print(h.shape)
 
         h = self.score_fr(h)
+        print(h.shape)
 
         h = self.upscore(h)
-        h = h[:, :, 19:19 + x.size()[2], 19:19 + x.size()[3]].contiguous()
+        print(h.shape)
+        #h = h[:, :, 19:19 + x.size()[2], 19:19 + x.size()[3]].contiguous()
 
         return h
 
@@ -150,7 +176,8 @@ def train(net, optimizer, criterion, device, data, target):
     # Forward pass of the neural net
     output = net(data)
     # Calculation of the loss function
-    loss = criterion(output, target)
+    loss = criterion(output, target) 
+    #loss = cross_entropy2d(output, target.squeeze()) #2D version
     # Backward pass (gradient computation)
     loss.backward()
     # Adjusting the parameters according to the loss function
@@ -176,9 +203,12 @@ if __name__ == '__main__':
 
     img, target = tf(img), tf(target)
     img.unsqueeze_(0)
-    target.unsqueeze_(0)
-    criterion = nn.CrossEntropyLoss()
+    #target.unsqueeze_(0)
+    print(img.shape)
+    print(target.shape)
+    #criterion = nn.CrossEntropyLoss() // using 2d version instead
+    criterion = nn.NLLLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
     for e in range(1, 30):
-        train(net, optimizer, criterion, device, img, target.long())
+        train(net, optimizer, criterion, device, img, target)
