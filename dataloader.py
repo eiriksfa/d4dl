@@ -9,7 +9,19 @@ from pathlib import Path
 from scipy.ndimage import imread
 from concurrent.futures import ThreadPoolExecutor
 from torchvision.transforms import functional as func
+from skimage import io
 
+classlib = {
+    (0,0,0) : 0,
+    (0,0,255) :1,
+    (0,255,0): 2
+}
+
+color_map = np.ndarray(shape=(256*256*256), dtype='int32')
+color_map[:] = -1
+for rgb, idx in classlib.items():
+    rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
+    color_map[rgb] = idx
 
 class Transformer:
 
@@ -23,6 +35,7 @@ class Transformer:
                                 self._rotate,
                                 self._to_label,
                                 self._to_tensor]
+        self.color_map = color_map
 
     def __call__(self, imgset):
         for f in self.transformations:
@@ -31,9 +44,11 @@ class Transformer:
 
     @staticmethod
     def _to_label(imgset):
-        print(imgset[1].shape)
-        labelimg = imgset[1]  # TODO: Change this to labelimage
-        print(labelimg.shape)
+        #print(imgset[1].shape)
+        print(imgset[1])
+        image = np.dot(imgset[1],np.array([65536, 256, 1], dtype='int32'))
+        labelimg = color_map[image]
+        #print(labelimg.shape)
         return imgset[0], labelimg
 
     @staticmethod
@@ -119,8 +134,8 @@ class ImageSet2(Dataset):
 
     def __init__(self):
         self.transformer = Transformer()
-        self.img = imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/316.png')
-        self.target = imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/317.png')
+        self.img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/316.png')
+        self.target = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/317.png')
 
     def __len__(self):
         return 1

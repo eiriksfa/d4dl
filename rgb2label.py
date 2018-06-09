@@ -57,7 +57,7 @@ def im2index(im):
             m_lable[h, w, :] = classlib[(r, g, b)]
     return m_lable
 
-img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/317.png')
+img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/317.png')
 #print(img)
 #img_labels, color_codes = rgb2label(img)
 #print(color_codes)
@@ -69,7 +69,7 @@ for rgb, idx in classlib.items():
     color_map[rgb] = idx
 
 def img_array_to_single_val(image, color_map):
-    image = image.dot(numpy.array([65536, 256, 1], dtype='int32'))
+    image = numpy.dot(image,numpy.array([65536, 256, 1], dtype='int32'))
     return color_map[image]
 
 #imgl = im2index(img)
