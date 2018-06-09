@@ -113,12 +113,21 @@ def import_images_sub(imgpath, labelpath, labelimagepath, engine, polyname='gtFi
         jsonn = img.stem.replace(imgname, polyname) + '.json'
         jsonp = labeldir.joinpath(jsonn)
         labelimg, (w, h) = process_label_image(jsonp)
-        iid = import_image(img, img.stem, w, h, engine)  # img, name, width, height, engine
+        iid = import_image(img, img.stem, w, h, engine, dtype=dtype)  # img, name, width, height, engine
         import_label_image(labelimg, labelimagepath, iid, 1, engine)
 
 
-def import_images(imgpath, labelpath, engine, polyname='gtFine_polygons', imgname='leftImg8bit', dtype=1):
-    pass
+def import_images(ip, lp, op, engine, polyname='gtFine_polygons', imgname='leftImg8bit'):
+    p = {'train': 1, 'val': 2, 'test': 3}
+    for dir in [d for d in ip.iterdir()]:
+        if dir.stem not in p:
+            continue
+        v = dir.stem
+        for subdir in [d for d in dir.iterdir()]:
+            s = subdir.stem
+            nlp = lp.joinpath(v + '/' + s)
+            nop = op.joinpath(v + '/' + s)
+            import_images_sub(subdir, nlp, nop, engine, polyname=polyname, imgname=imgname, dtype=p[v])
 
 
 def get_imageset(engine, type=1):
@@ -144,11 +153,8 @@ def build_labels(engine):
 if __name__ == '__main__':
     # build_labels(engine)
     engine = sa.create_engine('sqlite:///data.db')
-
-    l = ['weimar', 'zurich']
-    for d in l:
-        path = Path('E:/gtFine_trainvaltest/gtFine/train/' + d + '/')
-        p2 = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/train/' + d + '/')
-        p3 = Path('E:/labelimgs/train/' + d + '/')
-        import_images_sub(p2, path, p3, engine)
+    p1 = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/')
+    p2 = Path('E:/gtFine_trainvaltest/gtFine/')
+    p3 = Path('E:/labelimgs/')
+    import_images(p1, p2, p3, engine)
     print('FINISHED')
