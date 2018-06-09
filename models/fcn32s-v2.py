@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from dataloader import ImageSet, ImageSet2
 from torch.utils.data import DataLoader
 
+
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
 def get_upsampling_weight(in_channels, out_channels, kernel_size):
     """Make a 2D bilinear kernel suitable for upsampling"""
@@ -26,6 +27,7 @@ def get_upsampling_weight(in_channels, out_channels, kernel_size):
                       dtype=np.float64)
     weight[range(in_channels), range(out_channels), :, :] = filt
     return torch.from_numpy(weight).float()
+
 
 # from https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/trainer.py
 def cross_entropy2d(input, target, weight=None, size_average=True):
@@ -50,6 +52,7 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
     if size_average:
         loss /= mask.data.sum()
     return loss
+
 
 class FCN32s(nn.Module):
     def __init__(self, n_class=3):
@@ -112,7 +115,7 @@ class FCN32s(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.xavier_normal_(m.weight)
-            elif isinstance(m, nn.BatchNorm2d):  # TODO: batchnorm inits?
+            elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.ConvTranspose2d):
@@ -124,11 +127,9 @@ class FCN32s(nn.Module):
 
     def forward(self, x):
         h = x
-        print(h.shape)
         h = self.relu1_1(self.conv1_1(h))
         h = self.relu1_2(self.conv1_2(h))
         h = self.pool1(h)
-        print(h.shape)
 
         h = self.relu2_1(self.conv2_1(h))
         h = self.relu2_2(self.conv2_2(h))
@@ -148,21 +149,16 @@ class FCN32s(nn.Module):
         h = self.relu5_2(self.conv5_2(h))
         h = self.relu5_3(self.conv5_3(h))
         h = self.pool5(h)
-        print(h.shape)
 
         h = self.relu6(self.fc6(h))
         h = self.drop6(h)
-        print(h.shape)
 
         h = self.relu7(self.fc7(h))
         h = self.drop7(h)
-        print(h.shape)
 
         h = self.score_fr(h)
-        print(h.shape)
 
         h = self.upscore(h)
-        print(h.shape)
         #h = h[:, :, 19:19 + x.size()[2], 19:19 + x.size()[3]].contiguous()
 
         return h
@@ -172,6 +168,7 @@ class FCN32s(nn.Module):
 def train(net, optimizer, criterion, device, train):
     net.train()
     for batch_idx, (data, target) in enumerate(train):
+        print(target.shape)
         # Move the input and target data on the GPU
         data, target = data.to(device), target.to(device)
         # Zero out gradients from previous step
@@ -204,7 +201,7 @@ if __name__ == '__main__':
     # ts = ImageSet()
     # dl = DataLoader(ts, batch_size=4)
 
-    ts = ImageSet2()
+    ts = ImageSet()
     dl = DataLoader(ts, batch_size=1)
 
     #img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/2.png')

@@ -123,11 +123,13 @@ def import_images(ip, lp, op, engine, polyname='gtFine_polygons', imgname='leftI
         if dir.stem not in p:
             continue
         v = dir.stem
+        print('one maindir done')
         for subdir in [d for d in dir.iterdir()]:
             s = subdir.stem
             nlp = lp.joinpath(v + '/' + s)
             nop = op.joinpath(v + '/' + s)
             import_images_sub(subdir, nlp, nop, engine, polyname=polyname, imgname=imgname, dtype=p[v])
+            print('one subdir done')
 
 
 def get_imageset(engine, type=1):

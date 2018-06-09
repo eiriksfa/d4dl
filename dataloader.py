@@ -11,17 +11,6 @@ from concurrent.futures import ThreadPoolExecutor
 from torchvision.transforms import functional as func
 from skimage import io
 
-classlib = {
-    (0,0,0) : 0,
-    (0,0,255) :1,
-    (0,255,0): 2
-}
-
-color_map = np.ndarray(shape=(256*256*256), dtype='int32')
-color_map[:] = -1
-for rgb, idx in classlib.items():
-    rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
-    color_map[rgb] = idx
 
 class Transformer:
 
@@ -35,20 +24,28 @@ class Transformer:
                                 self._rotate,
                                 self._to_label,
                                 self._to_tensor]
-        self.color_map = color_map
+        self._build_color_map()
 
     def __call__(self, imgset):
         for f in self.transformations:
             imgset = f(imgset)
         return imgset
 
-    @staticmethod
-    def _to_label(imgset):
-        #print(imgset[1].shape)
-        print(imgset[1])
-        image = np.dot(imgset[1],np.array([65536, 256, 1], dtype='int32'))
-        labelimg = color_map[image]
-        #print(labelimg.shape)
+    def _build_color_map(self):
+        classlib = {
+            (0, 0, 0): 0,
+            (0, 0, 255): 1,
+            (0, 255, 0): 2
+        }
+        self.color_map = np.ndarray(shape=(256 * 256 * 256), dtype='int64')
+        self.color_map[:] = -1
+        for rgb, idx in classlib.items():
+            rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
+            self.color_map[rgb] = idx
+
+    def _to_label(self, imgset):
+        image = np.dot(imgset[1], np.array([65536, 256, 1], dtype='int64'))
+        labelimg = self.color_map[image]
         return imgset[0], labelimg
 
     @staticmethod
@@ -62,7 +59,7 @@ class Transformer:
 
     @staticmethod
     def _to_tensor(imgset):
-        return func.to_tensor(imgset[0]), func.to_tensor(imgset[1])
+        return func.to_tensor(imgset[0]), imgset[1]
 
     @staticmethod
     def _adjust_brightness(imgset):
@@ -179,7 +176,7 @@ class ImageSet(Dataset):
 
 if __name__ == '__main__':
     ts = ImageSet()
-    #loader = DataLoader(ts, batch_size=1)
+    # loader = DataLoader(ts, batch_size=1)
     print(ts.__len__())
     print(ts.__getitem__(1))
 
@@ -187,8 +184,9 @@ if __name__ == '__main__':
     t2 = time.time()
 
     img = ts.__getitem__(5)
+    print(img[1])
     print(t2 - t)
-    plt.imshow(img[0].numpy().transpose((1,2,0)))
+    plt.imshow(img[0].numpy().transpose((1, 2, 0)))
     plt.show()
-    plt.imshow(img[1].numpy().transpose((1,2,0)))
+    plt.imshow(img[1].numpy().transpose((1, 2, 0)))
     plt.show()
