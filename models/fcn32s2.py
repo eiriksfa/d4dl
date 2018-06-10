@@ -187,6 +187,61 @@ def train(epoch, net, optimizer, criterion, device, train):
                 epoch, batch_idx * len(data), len(train.dataset),
                 100. * batch_idx / len(train), loss.item()))
 
+def train2():
+    def train_epoch(self):
+        self.model.train()
+
+        n_class = len(self.train_loader.dataset.class_names)
+
+        for batch_idx, (data, target) in tqdm.tqdm(
+                enumerate(self.train_loader), total=len(self.train_loader),
+                desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
+            iteration = batch_idx + self.epoch * len(self.train_loader)
+            if self.iteration != 0 and (iteration - 1) != self.iteration:
+                continue  # for resuming
+            self.iteration = iteration
+
+            if self.iteration % self.interval_validate == 0:
+                self.validate()
+
+            assert self.model.training
+
+            if self.cuda:
+                data, target = data.cuda(), target.cuda()
+            data, target = Variable(data), Variable(target)
+            self.optim.zero_grad()
+            score = self.model(data)
+
+            loss = cross_entropy2d(score, target,
+                                   size_average=self.size_average)
+            loss /= len(data)
+            loss_data = float(loss.data[0])
+            if np.isnan(loss_data):
+                raise ValueError('loss is nan while training')
+            loss.backward()
+            self.optim.step()
+
+            metrics = []
+            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
+            lbl_true = target.data.cpu().numpy()
+            acc, acc_cls, mean_iu, fwavacc = \
+                torchfcn.utils.label_accuracy_score(
+                    lbl_true, lbl_pred, n_class=n_class)
+            metrics.append((acc, acc_cls, mean_iu, fwavacc))
+            metrics = np.mean(metrics, axis=0)
+
+            with open(osp.join(self.out, 'log.csv'), 'a') as f:
+                elapsed_time = (
+                        datetime.datetime.now(pytz.timezone('Asia/Tokyo')) -
+                        self.timestamp_start).total_seconds()
+                log = [self.epoch, self.iteration] + [loss_data] + \
+                      metrics.tolist() + [''] * 5 + [elapsed_time]
+                log = map(str, log)
+                f.write(','.join(log) + '\n')
+
+            if self.iteration >= self.max_iter:
+                break
+
 
 def test(net, criterion, device, val):
     net.eval()
@@ -228,6 +283,25 @@ def single_pass(net, device, train):
             plt.show()
             plt.imshow(res2)
             plt.show()
+
+
+def main():
+    tf = transforms.Compose([
+        transforms.ToTensor()
+    ])
+
+    device = 'cuda'
+    net = FCN32s()
+    net = net.to(device)
+    net = torch.nn.DataParallel(net)
+
+    ts = ImageSet(1)
+    vs = ImageSet(2)
+    dl = DataLoader(ts, batch_size=7)
+    vl = DataLoader(vs, batch_size=7)
+
+    single_pass(net, device, vl)
+
 
 if __name__ == '__main__':
     tf = transforms.Compose([
