@@ -313,9 +313,10 @@ def main():
     dl = DataLoader(ts, batch_size=4)
     vl = DataLoader(vs, batch_size=4)
 
-    #single_pass(net, device, vl)
+    single_pass(net, device, vl)
 
-    criterion = nn.NLLLoss2d()
+    #criterion = nn.NLLLoss2d()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
     for e in range(1, 2):
