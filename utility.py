@@ -52,6 +52,28 @@ road = [0, 16]  # Ground?
 background = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
               32, 33, 34, 35, 36, 37, 38, 39]
 
+# Image - Label mapping
+image_label = {
+    (0, 0, 0): 0,
+    (0, 0, 255): 1,
+    (0, 255, 0): 2
+}
+color_map = np.ndarray(shape=(256 * 256 * 256), dtype='int64')
+color_map[:] = -1
+for rgb, idx in image_label.items():
+    rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
+    color_map[rgb] = idx
+
+# Label - Image mapping
+label_image = {
+        0: (0, 0, 0),
+        1: (0, 0, 255),
+        2: (0, 255, 0)
+    }
+likeys, livalues = zip(*label_image.items())
+limap = np.empty((max(likeys) + 1, 3), int)
+limap[list(likeys), :] = livalues
+
 
 def ensure_dir(file_path):
     directory = os.path.dirname(file_path)
@@ -150,6 +172,15 @@ def build_labels(engine):
     for r in res:
         labels[r[1]] = r[0]
     print(labels)
+
+
+def image_to_labels(image):
+    image = np.dot(image, np.array([65536, 256, 1], dtype='int64'))
+    return color_map[image]
+
+
+def labels_to_image(labels):
+    return limap[labels, :]
 
 
 if __name__ == '__main__':

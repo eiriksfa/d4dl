@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from distutils.version import LooseVersion
 import torch.nn.functional as F
-from dataloader import ImageSet, ImageSet2
+from dataloader import ImageSet
 from torch.utils.data import DataLoader
 
 
@@ -165,10 +165,9 @@ class FCN32s(nn.Module):
 
 
 # Functions used for testing the model (consider moving into a util file or something, for use in all models)
-def train(net, optimizer, criterion, device, train):
+def train(epoch, net, optimizer, criterion, device, train):
     net.train()
     for batch_idx, (data, target) in enumerate(train):
-        print(target.shape)
         # Move the input and target data on the GPU
         data, target = data.to(device), target.to(device)
         # Zero out gradients from previous step
@@ -182,6 +181,30 @@ def train(net, optimizer, criterion, device, train):
         loss.backward()
         # Adjusting the parameters according to the loss function
         optimizer.step()
+        if batch_idx % 10 == 0:
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * len(data), len(train.dataset),
+                100. * batch_idx / len(train), loss.item()))
+
+
+def test(net, criterion, device, val):
+    net.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in val:
+            data, target = data.to(device), target.to(device)
+            output = net(data)
+            test_loss += criterion(output, target).item()  # sum up batch loss
+            pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
+
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(val.dataset)
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(val.dataset),
+        100. * correct / len(val.dataset)))
+    return correct
 
 
 def load_images():
@@ -198,23 +221,16 @@ if __name__ == '__main__':
     net = net.to(device)
     net = torch.nn.DataParallel(net)
 
-    # ts = ImageSet()
-    # dl = DataLoader(ts, batch_size=4)
+    ts = ImageSet(1)
+    vs = ImageSet(2)
+    dl = DataLoader(ts, batch_size=7)
+    vl = DataLoader(vs, batch_size=7)
 
-    ts = ImageSet()
-    dl = DataLoader(ts, batch_size=1)
-
-    #img = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/2.png')
-    #target = io.imread('/home/novian/term2/dl4ad/repo2/d4dl/testimg/1.png')
-
-    # img, target = tf(img), tf(target)
-    # img.unsqueeze_(0)
-    # #target.unsqueeze_(0)
-    # print(img.shape)
-    # print(target.shape)
-    #criterion = nn.CrossEntropyLoss() // using 2d version instead
     criterion = nn.NLLLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    for e in range(1, 30):
-        train(net, optimizer, criterion, device, dl)
+    for e in range(1, 10):
+        train(e, net, optimizer, criterion, device, dl)
+        a = test(net, criterion, device, vl)
+        print(a)
+    net.save_state_dict('test.pt')
