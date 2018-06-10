@@ -6,6 +6,7 @@ import torch.optim as optim
 from skimage import io
 import numpy as np
 import matplotlib.pyplot as plt
+import utility
 from distutils.version import LooseVersion
 import torch.nn.functional as F
 from dataloader import ImageSet
@@ -211,6 +212,23 @@ def load_images():
     pass
 
 
+def single_pass(net, device, train):
+    net.eval()
+    with torch.no_grad():
+        for batch_idx, (data, target) in enumerate(train):
+            # Move the input and target data on the GPU
+            data, target = data.to(device), target.to(device)
+            # Forward pass of the neural net
+            output = net(data)
+            print(output.shape)
+            print(target.shape)
+            result = utility.labels_to_image(target)
+            res2 = utility.labels_to_image(output)
+            plt.imshow(result)
+            plt.show()
+            plt.imshow(res2)
+            plt.show()
+
 if __name__ == '__main__':
     tf = transforms.Compose([
         transforms.ToTensor()
@@ -226,11 +244,13 @@ if __name__ == '__main__':
     dl = DataLoader(ts, batch_size=7)
     vl = DataLoader(vs, batch_size=7)
 
-    criterion = nn.NLLLoss2d()
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
-    accuracy = []
-    for e in range(1, 10):
-        train(e, net, optimizer, criterion, device, dl)
-        a = test(net, criterion, device, vl)
-        print(a)
-    net.save_state_dict('test.pt')
+    single_pass(net, device, vl)
+
+    # criterion = nn.NLLLoss2d()
+    # optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
+    # accuracy = []
+    # for e in range(1, 10):
+    #     train(e, net, optimizer, criterion, device, dl)
+    #     a = test(net, criterion, device, vl)
+    #     print(a)
+    # net.save_state_dict('test.pt')

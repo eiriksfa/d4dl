@@ -92,7 +92,7 @@ class ImageSet(Dataset):
         self._build_dataset()
 
     def _build_dataset(self):
-        engine = sa.create_engine('sqlite:///data.db')  #
+        engine = sa.create_engine('sqlite:///../data.db')  #
         self.data = utility.get_imageset(engine, self.itype)
 
     def __len__(self):
@@ -123,6 +123,11 @@ if __name__ == '__main__':
     plt.imshow(img[0].numpy().transpose((1, 2, 0)))
     plt.show()
     data = img[1]
+    for r in data:
+        for c in r:
+            if c not in [0, 1, 2]:
+                print(c, end="", flush=True)
+        print("")
     result = utility.labels_to_image(data)
     print(result)
     plt.imshow(result)
