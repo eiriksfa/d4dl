@@ -76,9 +76,9 @@ limap[list(likeys), :] = livalues
 
 
 def ensure_dir(file_path):
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    #directory = os.path.dirname(file_path)
+    if not os.path.exists(str(file_path)):
+        os.makedirs(str(file_path))
 
 
 def import_image(img, name, width, height, engine, dtype=1):
@@ -98,8 +98,8 @@ def import_image(img, name, width, height, engine, dtype=1):
 
 
 def import_label_image(image, path, imgid, ltid, engine):
-    path = path.joinpath(str(imgid) + '.png')
     ensure_dir(path)
+    path = path.joinpath(str(imgid) + '.png')
     imsave(path, image)
     res = sql.execute('select MAX(ID) from Labels', engine)
     iid = res.first()[0]
@@ -214,8 +214,8 @@ def label_accuracy_score(label_trues, label_preds, n_class):
 if __name__ == '__main__':
     # build_labels(engine)
     engine = sa.create_engine('sqlite:///data.db')
-    p1 = Path('E:/leftImg8bit_trainvaltest/leftImg8bit/')
-    p2 = Path('E:/gtFine_trainvaltest/gtFine/')
-    p3 = Path('E:/labelimgs/')
+    p1 = Path('/home/habibien/Dokumente/data/cityscape/leftImg8bit_trainvaltest/leftImg8bit/')
+    p2 = Path('/home/habibien/Dokumente/data/cityscape/gtFine_trainvaltest/gtFine/')
+    p3 = Path('/home/habibien/Dokumente/data/cityscape/labelimgs/')
     import_images(p1, p2, p3, engine)
     print('FINISHED')

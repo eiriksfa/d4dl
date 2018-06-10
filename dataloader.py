@@ -36,7 +36,7 @@ class Transformer:
 
     @staticmethod
     def _resize(imgset):
-        size = (512, 1024)
+        size = (128, 256)
         return func.resize(imgset[0], size), func.resize(imgset[1], size)
 
     @staticmethod
