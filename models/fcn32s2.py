@@ -355,7 +355,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    for e in range(1, 2):
+    for e in range(1, 5):
         train(e, net, optimizer, criterion, device, dl)
         a = test(net, criterion, device, vl)
         print(a)
