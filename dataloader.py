@@ -10,16 +10,22 @@ from torchvision.transforms import functional as func
 
 class Transformer:
 
-    def __init__(self):
-        self.transformations = [self._to_pil,
-                                self._resize,
-                                self._adjust_brightness,
-                                self._adjust_contrast,
-                                self._adjust_gamma,
-                                self._adjust_saturation,
-                                self._rotate,
-                                self._to_label,
-                                self._to_tensor]
+    def __init__(self, tf):
+        if tf:
+            self.transformations = [self._to_pil,
+                                    self._resize,
+                                    self._adjust_brightness,
+                                    self._adjust_contrast,
+                                    self._adjust_gamma,
+                                    self._adjust_saturation,
+                                    self._rotate,
+                                    self._to_label,
+                                    self._to_tensor]
+        else:
+            self.transformations = [self._to_pil,
+                                    self._resize,
+                                    self._to_label,
+                                    self._to_tensor]
 
     def __call__(self, imgset):
         for f in self.transformations:
@@ -86,8 +92,8 @@ class Transformer:
 
 class ImageSet(Dataset):
 
-    def __init__(self, itype):
-        self.transformer = Transformer()
+    def __init__(self, itype, tf=True):
+        self.transformer = Transformer(tf)
         self.itype = itype
         self._build_dataset()
 
@@ -96,7 +102,7 @@ class ImageSet(Dataset):
         self.data = utility.get_imageset(engine, self.itype)
 
     def __len__(self):
-        return len(self.data)
+        return 4 #len(self.data)
 
     @staticmethod
     def _get_image(path):

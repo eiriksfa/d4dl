@@ -180,7 +180,15 @@ def image_to_labels(image):
 
 
 def labels_to_image(labels):
-    return limap[labels, :]
+    img = limap[labels, :]
+    return img
+
+
+def output_labels_to_image(labels):
+    labels = labels.numpy().transpose((1, 2, 0))
+    labels = np.argmax(labels, axis=2)
+    image = labels_to_image(labels)
+    return image
 
 
 def _fast_hist(label_true, label_pred, n_class):

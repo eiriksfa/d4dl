@@ -105,12 +105,12 @@ class FCN32s(nn.Module):
         self.conv5_2 = nn.Conv2d(256, 256, 3, padding=1)
         self.batch5_2 = nn.BatchNorm2d(256)
         self.relu5_2 = nn.ReLU(inplace=True)
-        self.conv5_3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv5_3 = nn.Conv2d(256, 256, 3)
         self.batch5_3 = nn.BatchNorm2d(256)
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
         # fc6
-        self.fc6 = nn.Conv2d(256, 2048, 1)
+        self.fc6 = nn.Conv2d(256, 2048, 7, padding=3)
         self.relu6 = nn.ReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
@@ -120,7 +120,7 @@ class FCN32s(nn.Module):
         self.drop7 = nn.Dropout2d()
 
         self.score_fr = nn.Conv2d(2048, n_class, 1)
-        self.upscore = nn.ConvTranspose2d(n_class, n_class, 32, stride=32, bias=False)
+        self.upscore = nn.ConvTranspose2d(n_class, n_class, 64, stride=32, bias=False)
         #self.upscore = nn.UpsamplingBilinear2d(scale_factor=2)
 
         self._init_weights()
@@ -200,12 +200,8 @@ def train(epoch, net, optimizer, criterion, device, train):
                 epoch, batch_idx * len(data), len(train.dataset),
                 100. * batch_idx / len(train), loss.item()))
 
+
 def train2():
-    def train_epoch(self):
-        self.model.train()
-
-        n_class = len(self.train_loader.dataset.class_names)
-
         for batch_idx, (data, target) in tqdm.tqdm(
                 enumerate(self.train_loader), total=len(self.train_loader),
                 desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
@@ -225,8 +221,7 @@ def train2():
             self.optim.zero_grad()
             score = self.model(data)
 
-            loss = cross_entropy2d(score, target,
-                                   size_average=self.size_average)
+            loss = cross_entropy2d(score, target, size_average=True)
             loss /= len(data)
             loss_data = float(loss.data[0])
             if np.isnan(loss_data):
@@ -255,6 +250,7 @@ def train2():
             if self.iteration >= self.max_iter:
                 break
 
+
 # https://github.com/CSAILVision/semantic-segmentation-pytorch/blob/master/utils.py
 def intersectionAndUnion(pred, lab, numClass):
     pred = np.asarray(pred).copy()
@@ -276,17 +272,17 @@ def intersectionAndUnion(pred, lab, numClass):
     (area_lab, _) = np.histogram(lab, bins=numClass, range=(1, numClass))
     area_union = area_pred + area_lab - area_intersection
 
-    return (area_intersection, area_union)     
+    return (area_intersection, area_union)
 
 
-def test(net, criterion, device, val):
+def test(net, criterion, device, val, save, pre):
     net.eval()
     test_loss = 0
     correct = 0
     intersect_all = 0
     union_all = 0
-    print(val.__len__())
     with torch.no_grad():
+        imgname = 1
         for data, target in val:
             data, target = data.to(device), target.to(device)
             output = net(data)
@@ -294,22 +290,33 @@ def test(net, criterion, device, val):
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
             pred = torch.squeeze(pred)
 
+            if save:  # one per batch as is
+                for i in range(len(output)):
+                    res2 = utility.output_labels_to_image(output[i].cpu())
+                    plt.imshow(res2)
+                    plt.savefig('images/out_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
+                    plt.imshow(utility.labels_to_image(target[i]))
+                    plt.savefig('images/target_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
+                    plt.imshow(data[i].cpu().numpy().transpose((1, 2, 0)))
+                    plt.savefig('images/inp_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
+            imgname += 1
+
             for i in range(0, len(pred)):
                 intr, uni = intersectionAndUnion(pred[i], target[i], 3)
                 intersect_all += intr
                 union_all += uni
-                
+
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(val.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(val.dataset),
-        100. * correct / len(val.dataset)))
+        test_loss, correct, (len(val.dataset)*128*256),
+        100. * correct / (len(val.dataset)*128*256)))
     iou = intersect_all / union_all
     for i, _iou in enumerate(iou):
         print('class [{}], IoU: {}'.format(i, _iou))
     print("Mean IoU : {:.4}".format(iou.mean()))
-    return correct
+    return 100. * correct / (len(val.dataset)*128*256)
 
 
 def load_images():
@@ -324,14 +331,14 @@ def single_pass(net, device, train):
             data, target = data.to(device), target.to(device)
             # Forward pass of the neural net
             output = net(data)
-            print(output.shape)
-            print(target.shape)
-            result = utility.labels_to_image(target)
-            res2 = utility.labels_to_image(output)
-            plt.imshow(result)
-            plt.show()
-            plt.imshow(res2)
-            plt.show()
+            for t in target:
+                result = utility.labels_to_image(t)
+                plt.imshow(result)
+                plt.show()
+            for r in output:
+                res2 = utility.output_labels_to_image(r.cpu())
+                plt.imshow(res2)
+                plt.show()
 
 
 def main():
@@ -346,21 +353,30 @@ def main():
 
     ts = ImageSet(1)
     vs = ImageSet(2)
-    dl = DataLoader(ts, batch_size=4)
-    vl = DataLoader(vs, batch_size=4)
+    tts = ImageSet(3, False)
+    dl = DataLoader(ts, batch_size=64)
+    vl = DataLoader(vs, batch_size=64)
+    tl = DataLoader(tts, batch_size=64)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
+    net.load_state_dict(torch.load('snapshots/load.pt'))
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
+    optimizer = optim.SGD(net.parameters(), lr=0.02, momentum=0.5)
     accuracy = []
-    for e in range(1, 5):
-        train(e, net, optimizer, criterion, device, dl)
-        a = test(net, criterion, device, vl)
-        print(a)
-    #net.save_state_dict('test.pt')
+    # for e in range(1, 21):
+    #     train(e, net, optimizer, criterion, device, dl)
+    #     a = test(net, criterion, device, vl, False)
+    #     accuracy.append(a)
+    #     torch.save(net.state_dict(), 'snapshots/snapshot_' + str(e) + '.pt')
+    plt.plot(accuracy, range(len(accuracy)))
+    plt.savefig('images/plot.png')
+    test(net, criterion, device, dl, True, 'd')
+    test(net, criterion, device, vl, True, 'v')
+    test(net, criterion, device, tl, True, 't')
 
+    # torch.save(net.state_dict(), 'snapshots/model.pt')
 
 
 if __name__ == '__main__':
