@@ -255,24 +255,60 @@ def train2():
             if self.iteration >= self.max_iter:
                 break
 
+# https://github.com/CSAILVision/semantic-segmentation-pytorch/blob/master/utils.py
+def intersectionAndUnion(pred, lab, numClass):
+    pred = np.asarray(pred).copy()
+    lab = np.asarray(lab).copy()
+
+    pred += 1
+    lab += 1
+    # Remove classes from unlabeled pixels in gt image.
+    # We should not penalize detections in unlabeled portions of the image.
+    pred = pred * (lab > 0)
+
+    # Compute area intersection:
+    intersection = pred * (pred == lab)
+    (area_intersection, _) = np.histogram(
+        intersection, bins=numClass, range=(1, numClass))
+
+    # Compute area union:
+    (area_pred, _) = np.histogram(pred, bins=numClass, range=(1, numClass))
+    (area_lab, _) = np.histogram(lab, bins=numClass, range=(1, numClass))
+    area_union = area_pred + area_lab - area_intersection
+
+    return (area_intersection, area_union)     
+
 
 def test(net, criterion, device, val):
     net.eval()
     test_loss = 0
     correct = 0
+    intersect_all = 0
+    union_all = 0
+    print(val.__len__())
     with torch.no_grad():
         for data, target in val:
             data, target = data.to(device), target.to(device)
             output = net(data)
             test_loss += criterion(output, target).item()  # sum up batch loss
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            pred = torch.squeeze(pred)
 
+            for i in range(0, len(pred)):
+                intr, uni = intersectionAndUnion(pred[i], target[i], 3)
+                intersect_all += intr
+                union_all += uni
+                
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(val.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(val.dataset),
         100. * correct / len(val.dataset)))
+    iou = intersect_all / union_all
+    for i, _iou in enumerate(iou):
+        print('class [{}], IoU: {}'.format(i, _iou))
+    print("Mean IoU : {:.4}".format(iou.mean()))
     return correct
 
 
@@ -313,7 +349,7 @@ def main():
     dl = DataLoader(ts, batch_size=4)
     vl = DataLoader(vs, batch_size=4)
 
-    single_pass(net, device, vl)
+    #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
     criterion = nn.CrossEntropyLoss()
