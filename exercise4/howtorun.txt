@@ -1,0 +1,17 @@
+# create the package and compile
+http://wiki.ros.org/catkin/Tutorials/create_a_workspace
+
+#compile
+catkin_make #from the package folder
+
+# run the code
+roscore
+rosrun rviz rviz
+rosbag play -l (filename.bag)
+roslaunch roslaunch audi_projection start_measuring.launch
+
+# to check the published topic
+rostopic list
+
+#to see what's inside the topic
+rostopic echo /(topicname)
