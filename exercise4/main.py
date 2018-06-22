@@ -36,7 +36,6 @@ def publish(data):
 
 def callback(data):
     marker = data.markers[0]
-    # rospy.loginfo(marker.points[0])
     vectors = []
     for p in marker.points:
         v = np.array([p.x, p.y, p.z])
@@ -46,9 +45,6 @@ def callback(data):
         vectors.append(v)
     direction = vectors[1] - vectors[0]
     mv = vectors[1] + direction * 0.408
-    # rospy.loginfo(mv)
-    # d = np.linalg.norm(mv - vectors[1])
-    # rospy.loginfo(d)
     publish(mv)
 
 
