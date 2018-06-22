@@ -42,7 +42,7 @@ class Transformer:
 
     @staticmethod
     def _resize(imgset):
-        size = (128, 256)
+        size = (256, 512)
         return func.resize(imgset[0], size), func.resize(imgset[1], size)
 
     @staticmethod
@@ -59,23 +59,23 @@ class Transformer:
 
     @staticmethod
     def _adjust_contrast(imgset):
-        chance = 0.2
+        chance = 0.25
         if np.random.random() > chance:
             return imgset
-        v = np.random.uniform(low=0.5, high=1.5)
+        v = np.random.uniform(low=0.2, high=1.8)
         return func.adjust_contrast(imgset[0], v), imgset[1]
 
     @staticmethod
     def _adjust_gamma(imgset):
-        chance = 0.2
+        chance = 0.25
         if np.random.random() > chance:
             return imgset
-        v = np.random.uniform(low=0.5, high=1.5)
+        v = np.random.uniform(low=0.2, high=1.8)
         return func.adjust_gamma(imgset[0], v), imgset[1]
 
     @staticmethod
     def _adjust_saturation(imgset):
-        chance = 0.2
+        chance = 0.25
         if np.random.random() > chance:
             return imgset
         v = np.random.uniform(low=0.5, high=1.5)
@@ -86,7 +86,7 @@ class Transformer:
         chance = 0.4
         if np.random.random() > chance:
             return imgset
-        v = np.random.randint(-90, 90)
+        v = np.random.randint(-30, 30)
         return func.rotate(imgset[0], v), func.rotate(imgset[1], v)
 
 
@@ -102,7 +102,7 @@ class ImageSet(Dataset):
         self.data = utility.get_imageset(engine, self.itype)
 
     def __len__(self):
-        return 4 #len(self.data)
+        return len(self.data)
 
     @staticmethod
     def _get_image(path):

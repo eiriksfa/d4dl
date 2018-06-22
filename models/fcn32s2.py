@@ -55,6 +55,15 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
     return loss
 
 
+class CrossEntropyLoss2d(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(CrossEntropyLoss2d, self).__init__()
+        self.nll_loss = nn.NLLLoss2d(weight, size_average)
+
+    def forward(self, inputs, targets):
+        return self.nll_loss(F.log_softmax(inputs), targets)
+
+
 class FCN32s(nn.Module):
     def __init__(self, n_class=3):
         super(FCN32s, self).__init__()
@@ -352,31 +361,31 @@ def main():
     net = torch.nn.DataParallel(net)
 
     ts = ImageSet(1)
-    vs = ImageSet(2)
+    vs = ImageSet(2, False)
     tts = ImageSet(3, False)
-    dl = DataLoader(ts, batch_size=64)
-    vl = DataLoader(vs, batch_size=64)
-    tl = DataLoader(tts, batch_size=64)
+    dl = DataLoader(ts, batch_size=16)
+    vl = DataLoader(vs, batch_size=16)
+    tl = DataLoader(tts, batch_size=16)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
-    net.load_state_dict(torch.load('snapshots/load.pt'))
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.02, momentum=0.5)
+    # net.load_state_dict(torch.load('snapshots/load.pt'))
+    criterion = CrossEntropyLoss2d()
+    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    # for e in range(1, 21):
-    #     train(e, net, optimizer, criterion, device, dl)
-    #     a = test(net, criterion, device, vl, False)
-    #     accuracy.append(a)
-    #     torch.save(net.state_dict(), 'snapshots/snapshot_' + str(e) + '.pt')
+    for e in range(1, 16):
+        train(e, net, optimizer, criterion, device, dl)
+        a = test(net, criterion, device, vl, False, 'v')
+        accuracy.append(a)
+        torch.save(net.state_dict(), 'snapshots/snapshot_' + str(e) + '.pt')
     plt.plot(accuracy, range(len(accuracy)))
     plt.savefig('images/plot.png')
-    test(net, criterion, device, dl, True, 'd')
+    # test(net, criterion, device, dl, True, 'd')
     test(net, criterion, device, vl, True, 'v')
     test(net, criterion, device, tl, True, 't')
 
-    # torch.save(net.state_dict(), 'snapshots/model.pt')
+    torch.save(net.state_dict(), 'snapshots/model.pt')
 
 
 if __name__ == '__main__':
