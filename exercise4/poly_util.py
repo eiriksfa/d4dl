@@ -24,7 +24,7 @@ def pandas_to_ros(df):
         p.x = point[0]
         p.y = point[1]
         p.z = point[2]
-        poly.append(p)
+        poly.points.append(p)
     return poly
 
 

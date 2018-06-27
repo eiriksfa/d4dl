@@ -18,7 +18,9 @@ class PolyCap(object):
         self.new = False
         self.polygon = Polygon()
         self.msg_poly = PolygonStamped()
-        self.count = 0
+        self.pc = 0
+        self.sc = 12
+        #   self.old_poly = None
 
     def callback_marker(self,marker):
         if self.npoint:
@@ -37,27 +39,31 @@ class PolyCap(object):
             self.new = False
             self.polygon = Polygon()
             self.msg_poly = PolygonStamped()
-            self.count += 1
+            self.pc += 1
             print('add new polygon')
         elif self.save:
             self.save = False
             df = pu.ros_to_pd(self.polygon)
             df = pu.interpolate(df, 0.1)
-            pu.save(df, 'polygons/poly_' + str(self.count) + '.csv')
-            self.new = True
+            #self.old_poly = pu.pandas_to_ros(df)
+            pu.save(df, 'polygons/poly_' + str(self.sc) + '_' + str(self.pc) + '.csv')
             print('ploygon saved')
 
         pub.publish(self.msg_poly)
 
+
     def callback_button(self,data):
         self.pressed = data.code
         print('pressed')
-        if data.code==32:
+        if data.code==32: #space
             self.npoint = True
-        elif data.code==115:
+        elif data.code==115: #s
             self.save = True
-        elif data.code==110:
+        elif data.code==110: #n
             self.new = True
+        elif data.code==112: #p
+            self.new = True
+            self.sc += 1    
 
     def listener(self):
         rospy.init_node('listener',anonymous=True)

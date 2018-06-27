@@ -35,7 +35,7 @@ def publish(data):
 
 
 def callback(data):
-    marker = data.markers[0]
+    marker = data.markers[1]
     vectors = []
     for p in marker.points:
         v = np.array([p.x, p.y, p.z])
@@ -43,8 +43,11 @@ def callback(data):
             rospy.loginfo('Found nan, returning')
             return
         vectors.append(v)
-    direction = vectors[1] - vectors[0]
-    mv = vectors[1] + direction * 0.408
+    direction = vectors[0] - vectors[1]
+    norm = direction / (np.sqrt(np.dot(direction,direction)))
+    leng = norm * 0.408
+    print(leng)
+    mv = vectors[0] + leng
     publish(mv)
 
 
