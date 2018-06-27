@@ -5,7 +5,7 @@ from geometry_msgs.msg import Polygon, Point32
 
 def ros_to_np(poly):
     points = []
-    for point in poly:
+    for point in poly.points:
         points.append([point.x, point.y, point.z])
     points = np.array(points)
     return points
