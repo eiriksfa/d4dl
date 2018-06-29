@@ -42,10 +42,8 @@ def process_image(img, polygons, intr, transform):
             coords = np.round(coords).astype(np.int32)
             print(coords)
             projected.append(coords)
-            break
         projected = np.array(projected)
         cv2.fillPoly(img, [projected], (0, 255, 0))
-        break
     cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
     return out
 
