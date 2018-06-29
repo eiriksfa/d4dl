@@ -1,0 +1,23 @@
+---
+header: 
+  seq: 4154
+  stamp: 
+    secs: 1530124519
+    nsecs: 741672482
+  frame_id: "output_camera"
+height: 1281
+width: 2380
+distortion_model: "equidistant"
+D: [0.0, 0.0, 0.0, 0.0, 0.0]
+K: [585.2304272868565, 0.0, 1190.0, 0.0, 585.2304272868565, 640.5, 0.0, 0.0, 1.0]
+R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+P: [585.2304272868565, 0.0, 1190.0, 0.0, 0.0, 585.2304272868565, 640.5, 0.0, 0.0, 0.0, 1.0, 0.0]
+binning_x: 0
+binning_y: 0
+roi: 
+  x_offset: 0
+  y_offset: 0
+  height: 0
+  width: 0
+  do_rectify: False
+---
