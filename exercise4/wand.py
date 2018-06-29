@@ -44,7 +44,7 @@ def callback(data):
             return
         vectors.append(v)
     direction = vectors[0] - vectors[1]
-    norm = direction / (np.sqrt(np.dot(direction,direction)))
+    norm = direction / (np.sqrt(np.dot(direction, direction)))
     leng = norm * 0.408
     print(leng)
     mv = vectors[0] + leng
