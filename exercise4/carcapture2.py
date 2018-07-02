@@ -174,7 +174,7 @@ class CameraPose(object):
                 c = np.matmul(P, coords)
                 if c[2] > 0:  # Front of camera, TODO: Clipping
                     coords = np.matmul(trans, coords)
-                    coords = [[(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]]
+                    coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
                     projected.append(coords)
             if len(projected) > 2:
@@ -184,8 +184,8 @@ class CameraPose(object):
 
     def _build_label_image(self, shape, polygons, path):
         img = np.zeros(shape)
-        for r in img:
-            for c in r:
+        for r in range(len(img)):
+            for c in range(len(img[r])):
                 for p in polygons:
                     if point_inside_polygon(c, r, p):
                         img[r][c] = 1

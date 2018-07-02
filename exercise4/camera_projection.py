@@ -120,7 +120,7 @@ def load_polygons(path):
 
 def process_image(img, polygons, intr, extrinsic):
     # transform = intr @ extr
-    print(p)
+    print(P)
     out = img.copy()
     coords = np.array([[3.80983965293], [-4.259930015], [-0.032020637], [1]])
     coords2 = np.array([[3.789993012], [-2.325306419], [-0.034404161], [1]])
@@ -129,7 +129,7 @@ def process_image(img, polygons, intr, extrinsic):
     trans = intrinsics @ extrinsic
     print('========')
     print(coords)
-    c = p @ coords
+    c = P @ coords
     coords = trans @ coords
     print(c)
     coords2 = trans @ coords2
@@ -162,14 +162,31 @@ def process_image(img, polygons, intr, extrinsic):
     #     cv2.fillPoly(img, [projected], (0, 255, 0))
     # cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
     print(out.shape)
+    polygons2 = []
+    for polygon in polygons:
+        projected = []
+        # below can probably be vectorized somehow, maybe consider using bboxes as well
+        for i, r in polygon.iterrows():
+            coords = np.array([[r.x], [r.y], [r.z], [1]])
+            c = np.matmul(P, coords)
+            if c[2] > 0:  # Front of camera, TODO: Clipping
+                coords = np.matmul(trans, coords)
+                coords = [[(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]]
+                coords = np.round(coords).astype(np.int32)
+                projected.append(coords)
+        if len(projected) > 2:
+            projected = np.array(projected)
+            polygons2.append(projected)
+
+    # img = np.zeros((out.shape[0], out.shape[1]))
+    # for r in range(len(img)):
+    #     for c in range(len(img[r])):
+    #         for p in polygons2:
+    #             print(p)
     # cv2.circle(out, (coords11[0][0], 1281-(coords11[0][1])), 40, (255, 0, 0), thickness=7)
-    t1 = (coords[0][0], coords[0][1])
-    t2 = (coords2[0][0], coords2[0][1])
-    t3 = (coords3[0][0], coords3[0][1])
-    t4 = (coords4[0][0], coords4[0][1])
-    print(t1)
-    projected = np.array([t1, t2, t3, t4])
-    cv2.fillPoly(img, [projected], (255, 0, 0))
+    out = img.copy()
+    for p in polygons2:
+        cv2.fillPoly(img, [p], (0, 0, 255))
     cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
     return out
 
