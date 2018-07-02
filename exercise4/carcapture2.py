@@ -30,7 +30,7 @@ def unit_vector(data, axis=None, out=None):
         if out is not data:
             out[:] = np.array(data, copy=False)
         data = out
-    length = np.atleast_1d(np.sum(data*data, axis))
+    length = np.atleast_1d(np.sum(data * data, axis))
     np.sqrt(length, length)
     if axis is not None:
         length = np.expand_dims(length, axis)
@@ -87,11 +87,11 @@ def rotation_from_matrix(matrix):
     # rotation angle depending on direction
     cosa = (np.trace(R33) - 1.0) / 2.0
     if abs(direction[2]) > 1e-8:
-        sina = (R[1, 0] + (cosa-1.0)*direction[0]*direction[1]) / direction[2]
+        sina = (R[1, 0] + (cosa - 1.0) * direction[0] * direction[1]) / direction[2]
     elif abs(direction[1]) > 1e-8:
-        sina = (R[0, 2] + (cosa-1.0)*direction[0]*direction[2]) / direction[1]
+        sina = (R[0, 2] + (cosa - 1.0) * direction[0] * direction[2]) / direction[1]
     else:
-        sina = (R[2, 1] + (cosa-1.0)*direction[1]*direction[2]) / direction[0]
+        sina = (R[2, 1] + (cosa - 1.0) * direction[1] * direction[2]) / direction[0]
     angle = math.atan2(sina, cosa)
     return angle, direction, point
 
@@ -117,20 +117,29 @@ def build_matrices(rot, trans):
 
 
 def point_inside_polygon(x, y, poly):
+    """
+    # determine if a point is inside a given polygon or not
+    # Polygon is a list of [x,y] pairs.
+    From http://www.ariel.com.au/a/python-point-int-poly.html
+    :param x:
+    :param y:
+    :param poly:
+    :return:
+    """
     n = len(poly)
-    inside =False
+    inside = False
 
-    p1x,p1y = poly[0][0], poly[0][1]
-    for i in range(n+1):
-        p2x,p2y = poly[i % n][0],poly[i % n][1]
-        if y > min(p1y,p2y):
-            if y <= max(p1y,p2y):
-                if x <= max(p1x,p2x):
+    p1x, p1y = poly[0][0], poly[0][1]
+    for i in range(n + 1):
+        p2x, p2y = poly[i % n][0], poly[i % n][1]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
                     if p1y != p2y:
-                        xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
                     if p1x == p2x or x <= xinters:
                         inside = not inside
-        p1x,p1y = p2x,p2y
+        p1x, p1y = p2x, p2y
 
     return inside
 
@@ -148,7 +157,8 @@ class CameraPose(object):
         self.prop = None
         self.polygon = load_polygons('/home/novian/term2/dl4ad/repo2/d4dl/exercise4/polygons')
         self.counter = 0
-        self.intrinsics = np.array([[585.2304272868565, 0.0, 1190.0, 0], [0.0, 585.2304272868565, 640.5, 0], [0.0, 0.0, 1.0, 0.0]])
+        self.intrinsics = np.array(
+            [[585.2304272868565, 0.0, 1190.0, 0], [0.0, 585.2304272868565, 640.5, 0], [0.0, 0.0, 1.0, 0.0]])
 
     def callback_camerainfo(self, prop):
         self.prop = prop
@@ -221,13 +231,16 @@ class CameraPose(object):
             self.broken_amt += 1
 
         if not broken:
-            rot = np.array(rot) # TODO: Check that it is a numpy array of form 3x3, f'ex: np.array([[-9.88373548e-01, -1.12874824e-03, 1.52040968e-01], [-1.52045131e-01, 7.93392204e-03, -9.88341708e-01], [-9.06922267e-05, -9.99967889e-01, -8.01329935e-03]])
-            trans = np.array(trans) # TODO: Numpy array of 3x1: np.array([[3.55766200e+00], [-1.10985354e+00], [1.72194294e-01]])
+            rot = np.array(
+                rot)  # TODO: Check that it is a numpy array of form 3x3, f'ex: np.array([[-9.88373548e-01, -1.12874824e-03, 1.52040968e-01], [-1.52045131e-01, 7.93392204e-03, -9.88341708e-01], [-9.06922267e-05, -9.99967889e-01, -8.01329935e-03]])
+            trans = np.array(
+                trans)  # TODO: Numpy array of 3x1: np.array([[3.55766200e+00], [-1.10985354e+00], [1.72194294e-01]])
             P, extrinsics = build_matrices(rot, trans)
             polygons = self._build_polygons(P, extrinsics)
             self.counter += 1
             img = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
-            self._build_label_image((img.shape[0], img.shape[1]), polygons, '/home/novian/catkin_ws/src/bagfile/car-02n/')
+            self._build_label_image((img.shape[0], img.shape[1]), polygons,
+                                    '/home/novian/catkin_ws/src/bagfile/car-02n/')
         self.mat.append(mtr)
         self.imgseq.append(namefile)
         self.timestamp.append(img.header.stamp)
@@ -255,4 +268,3 @@ class CameraPose(object):
 if __name__ == '__main__':
     cp = CameraPose()
     cp.listener()
-
