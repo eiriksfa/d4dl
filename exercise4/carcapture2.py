@@ -117,34 +117,6 @@ def build_matrices(rot, trans):
     return P, extrinsic
 
 
-def point_inside_polygon(x, y, poly):
-    """
-    # determine if a point is inside a given polygon or not
-    # Polygon is a list of [x,y] pairs.
-    From http://www.ariel.com.au/a/python-point-int-poly.html
-    :param x:
-    :param y:
-    :param poly:
-    :return:
-    """
-    n = len(poly)
-    inside = False
-
-    p1x, p1y = poly[0][0], poly[0][1]
-    for i in range(n + 1):
-        p2x, p2y = poly[i % n][0], poly[i % n][1]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-
-    return inside
-
-
 class CameraPose(object):
 
     def __init__(self):
@@ -176,6 +148,9 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 c = np.matmul(P, coords)
+                coords = np.matmul(extrinsics, coords)
+                print(coords)
+                print('============')
                 if c[2] > 0:  # Front of camera
                     coords = np.matmul(trans, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
@@ -262,8 +237,8 @@ class CameraPose(object):
             self.counter += 1
             img = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("image for "+namefile+" built")
-            self._build_label_image((img.shape[0], img.shape[1]), lp,
-                                    '/home/novian/catkin_ws/src/bagfile/car-02n/')
+            # self._build_label_image((img.shape[0], img.shape[1]), lp,
+            #                         '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("label for "+namefile+" built")
 
         self.mat.append(mtr)
