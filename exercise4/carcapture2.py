@@ -183,6 +183,8 @@ class CameraPose(object):
         return polygons
 
     def _build_label_image(self, shape, polygons, path):
+        print("start poly")
+        print(len(polygons))
         img = np.zeros(shape)
         for r in range(len(img)):
             for c in range(len(img[r])):
@@ -249,15 +251,21 @@ class CameraPose(object):
             print(trans_v)
 
             P, extrinsics = build_matrices(rot_m, trans_v)
+            print("matrices for "+namefile+" built")
             polygons = self._build_polygons(P, extrinsics)
+            print("polygon for "+namefile+" built")
             self.counter += 1
             img = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
+            print("image for "+namefile+" built")
             self._build_label_image((img.shape[0], img.shape[1]), polygons,
                                     '/home/novian/catkin_ws/src/bagfile/car-02n/')
+            print("label for "+namefile+" built")
+
         self.mat.append(mtr)
         self.imgseq.append(namefile)
         self.timestamp.append(img.header.stamp)
         self.broken.append(broken)
+        print("done for "+namefile)
 
     def hook(self):
         print('shutdown')
