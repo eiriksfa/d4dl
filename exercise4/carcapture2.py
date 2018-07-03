@@ -6,6 +6,7 @@ from tf import ExtrapolationException, ConnectivityException
 import time
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+import skimage.draw as draw
 import cv2
 import os
 import pandas as pd
@@ -166,8 +167,11 @@ class CameraPose(object):
     def _build_polygons(self, P, extrinsics):
         trans = np.matmul(self.intrinsics, extrinsics)
         polygons = []
+        lp = []
         for polygon in self.polygon:
             projected = []
+            cp = []
+            rp = []
             # below can probably be vectorized somehow, maybe consider using bboxes as well
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
@@ -177,20 +181,21 @@ class CameraPose(object):
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
                     projected.append(coords)
+                    rp.append(coords[0])
+                    cp.append(coords[1])
             if len(projected) > 2:
                 projected = np.array(projected)
                 polygons.append(projected)
-        return polygons
+                lp.append((rp, cp))
+        return polygons, lp
 
     def _build_label_image(self, shape, polygons, path):
-        print("start poly")
-        print(len(polygons))
         img = np.zeros(shape)
-        for r in range(len(img)):
-            for c in range(len(img[r])):
-                for p in polygons:
-                    if point_inside_polygon(c, r, p):
-                        img[r][c] = 1
+        for p in polygons:
+            r = p[0]
+            c = p[1]
+            rr, cc = draw.polygon(r, c)
+            img[rr, cc] = 1
         namefile = str(self.counter) + '_label_out.png'
         imsave(os.path.join(path, namefile), img)
 
@@ -252,12 +257,12 @@ class CameraPose(object):
 
             P, extrinsics = build_matrices(rot_m, trans_v)
             print("matrices for "+namefile+" built")
-            polygons = self._build_polygons(P, extrinsics)
+            polygons, lp = self._build_polygons(P, extrinsics)
             print("polygon for "+namefile+" built")
             self.counter += 1
             img = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("image for "+namefile+" built")
-            self._build_label_image((img.shape[0], img.shape[1]), polygons,
+            self._build_label_image((img.shape[0], img.shape[1]), lp,
                                     '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("label for "+namefile+" built")
 
