@@ -149,8 +149,6 @@ class CameraPose(object):
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 c = np.matmul(P, coords)
                 coords = np.matmul(extrinsics, coords)
-                print(coords)
-                print('============')
                 if c[2] > 0:  # Front of camera
                     #coords = np.matmul(trans, coords)
                     coords = np.matmul(self.intrinsics, coords)
@@ -236,7 +234,7 @@ class CameraPose(object):
             polygons, lp = self._build_polygons(P, extrinsics)
             print("polygon for "+namefile+" built")
             self.counter += 1
-            img = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
+            self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("image for "+namefile+" built")
             # self._build_label_image((img.shape[0], img.shape[1]), lp,
             #                         '/home/novian/catkin_ws/src/bagfile/car-02n/')
