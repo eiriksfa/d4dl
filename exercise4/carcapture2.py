@@ -149,7 +149,8 @@ class CameraPose(object):
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 c = np.matmul(P, coords)
                 coords = np.matmul(extrinsics, coords)
-                if c[2] > 0:  # Front of camera
+
+                if coords[2][0] > 0 and (math.atan2(coords[1][0], coords[0][0]) > 0.3 or math.atan2(coords[1][0], coords[0][0]) < 0.3):  # Front of camera
                     #coords = np.matmul(trans, coords)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]

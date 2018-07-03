@@ -126,15 +126,40 @@ def process_image(img, polygons, intr, extrinsic):
     coords2 = np.array([[3.789993012], [-2.325306419], [-0.034404161], [1]])
     coords3 = np.array([[3.370829342], [-2.317988317], [-0.023907091], [1]])
     coords4 = np.array([[3.384244631], [-4.267839467], [-0.016064657], [1]])
+    coords5 = np.array([[3.29879430944],[0.916567469788],[-0.0179479772024], [1]])
     trans = intrinsics @ extrinsic
     print('========')
     print(coords)
     c = P @ coords
-    coords = trans @ coords
+    coords = extrinsic @ coords
     print(c)
-    coords2 = trans @ coords2
-    coords3 = trans @ coords3
-    coords4 = trans @ coords4
+    coords2 = extrinsic @ coords2
+    coords3 = extrinsic @ coords3
+    coords4 = extrinsic @ coords4
+    coords5 = extrinsic @ coords5
+
+    print("++++++++++++++++TEST+++++++++")
+    print(translation)
+    print('==========')
+    print(coords)
+    print('==========')
+    print(extrinsic @ translation)  # Should be 0,0,0,1
+    print('-=-angles--=-=-')
+    print(math.atan2(coords[1][0], coords[0][0]))
+    print(coords[2][0])
+    print(math.atan2(coords5[1][0], coords5[0][0]))
+    print(coords5[2][0])
+    print('===============S')
+    test = np.concatenate((rot, np.array([[0],[0],[0],[1]])), axis=1)
+    print(test)
+    print(rotation_from_matrix(test))
+    print('++++++++++++++++++++++++++++++')
+
+    coords = intrinsics @ coords
+    coords2 = intrinsics @ coords2
+    coords3 = intrinsics @ coords3
+    coords4 = intrinsics @ coords4
+    print(coords)
     print('========')
     coords = [[(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]]
     coords = np.round(coords).astype(np.int32)
@@ -161,22 +186,22 @@ def process_image(img, polygons, intr, extrinsic):
     #     projected = np.array(projected)
     #     cv2.fillPoly(img, [projected], (0, 255, 0))
     # cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
-    print(out.shape)
-    polygons2 = []
-    for polygon in polygons:
-        projected = []
-        # below can probably be vectorized somehow, maybe consider using bboxes as well
-        for i, r in polygon.iterrows():
-            coords = np.array([[r.x], [r.y], [r.z], [1]])
-            c = np.matmul(P, coords)
-            if c[2] > 0:  # Front of camera, TODO: Clipping
-                coords = np.matmul(trans, coords)
-                coords = [[(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]]
-                coords = np.round(coords).astype(np.int32)
-                projected.append(coords)
-        if len(projected) > 2:
-            projected = np.array(projected)
-            polygons2.append(projected)
+    # print(out.shape)
+    # polygons2 = []
+    # for polygon in polygons:
+    #     projected = []
+    #     # below can probably be vectorized somehow, maybe consider using bboxes as well
+    #     for i, r in polygon.iterrows():
+    #         coords = np.array([[r.x], [r.y], [r.z], [1]])
+    #         c = np.matmul(P, coords)
+    #         if c[2] > 0:  # Front of camera, TODO: Clipping
+    #             coords = np.matmul(trans, coords)
+    #             coords = [[(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]]
+    #             coords = np.round(coords).astype(np.int32)
+    #             projected.append(coords)
+    #     if len(projected) > 2:
+    #         projected = np.array(projected)
+    #         polygons2.append(projected)
 
     # img = np.zeros((out.shape[0], out.shape[1]))
     # for r in range(len(img)):
@@ -185,9 +210,9 @@ def process_image(img, polygons, intr, extrinsic):
     #             print(p)
     # cv2.circle(out, (coords11[0][0], 1281-(coords11[0][1])), 40, (255, 0, 0), thickness=7)
     out = img.copy()
-    for p in polygons2:
-        cv2.fillPoly(img, [p], (0, 0, 255))
-    cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+    # for p in polygons2:
+    #     cv2.fillPoly(img, [p], (0, 0, 255))
+    # cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
     return out
 
 
