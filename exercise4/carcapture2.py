@@ -107,14 +107,12 @@ def load_polygons(path):
 
 
 def build_matrices(rot, trans):
-    P = np.matmul(-rot, trans)
-    P = np.concatenate((rot, P), axis=1)
     rot = np.append(rot, [[0, 0, 0]], axis=0)
     trans = np.append(trans, [[1]], axis=0)
 
     transform = np.concatenate((rot, trans), axis=1)
     extrinsic = np.linalg.inv(transform)
-    return P, extrinsic
+    return extrinsic
 
 
 class CameraPose(object):
@@ -136,21 +134,17 @@ class CameraPose(object):
     def callback_camerainfo(self, prop):
         self.prop = prop
 
-    def _build_polygons(self, P, extrinsics):
-        # trans = np.matmul(self.intrinsics, extrinsics)
+    def _build_polygons(self, extrinsics):
         polygons = []
         lp = []
         for polygon in self.polygon:
             projected = []
             cp = []
             rp = []
-            # below can probably be vectorized somehow, maybe consider using bboxes as well
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
-                c = np.matmul(P, coords)
                 coords = np.matmul(extrinsics, coords)
                 if coords[2][0] > 0.00001:
-                    #coords = np.matmul(trans, coords)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
@@ -175,12 +169,17 @@ class CameraPose(object):
 
     def _build_image(self, polygons, img, path):
         out = img.copy()
+        label = np.zeros(out.shape, np.uint8)
         for p in polygons:
-            cv2.fillPoly(img, [p], (0, 0, 255))
+            cv2.fillPoly(img, [p], (0, 255, 0))
+            cv2.fillPoly(label, [p], (0, 255, 0))
         cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
         namefile = str(self.counter) + '_out.png'
+        labename = str(self.counter) + '_label.png'
         cv2.imwrite(os.path.join(path, namefile), out)
-        return out
+        cv2.imwrite(os.path.join(path, labename), label)
+        # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
+        return out, label
 
     def callback_camera(self, img):
         namefile = '{}{:06d}{}'.format('car02-frame', self.num, '.png')
@@ -202,43 +201,23 @@ class CameraPose(object):
 
         try:
             (trans, rot) = self.tf_listener.lookupTransform('/mocap', 'front_cam', img.header.stamp)
-        except ExtrapolationException as e:
+            mtr = self.tf_listener.fromTranslationRotation(trans, rot)
+        except (ExtrapolationException, ConnectivityException) as e:
             print(e)
             broken = True
             self.broken_amt += 1
-        except ConnectivityException as e:
-            print(e)
-            broken = True
-            self.broken_amt += 1
-        else:
-            mtr = self.tf_listener.fromTranslationRotation(trans,rot)
-        print(mtr)
-        
 
         if not broken:
-            # TODO: rot = rotation_matrix(angle, rotation...) FIX!
-            #rot = np.array(rot)  # TODO: Check that it is a numpy array of form 3x3, f'ex: np.array([[-9.88373548e-01, -1.12874824e-03, 1.52040968e-01], [-1.52045131e-01, 7.93392204e-03, -9.88341708e-01], [-9.06922267e-05, -9.99967889e-01, -8.01329935e-03]])
-            #rot_m = tf.transformations.quaternion_matrix(rot) # equivalent with subset of mtr in [1:3,1:3]
-            rot_m = mtr[0:3,0:3]
-            
-            #trans = np.array(trans)  # TODO: Numpy array of 3x1: np.array([[3.55766200e+00], [-1.10985354e+00], [1.72194294e-01]])
-            #trans_v = np.transpose(mtr[0:3,3:4])
-            #trans_v = trans
-            trans_v = mtr[0:3,3:4]
-            
-            print(rot_m)
-            print(trans_v)
+            rot_m = mtr[0:3, 0:3]
+            trans_v = mtr[0:3, 3:4]
 
-            P, extrinsics = build_matrices(rot_m, trans_v)
+            extrinsics = build_matrices(rot_m, trans_v)
             print("matrices for "+namefile+" built")
-            polygons, lp = self._build_polygons(P, extrinsics)
+            polygons, lp = self._build_polygons(extrinsics)
             print("polygon for "+namefile+" built")
             self.counter += 1
             self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-02n/')
             print("image for "+namefile+" built")
-            # self._build_label_image((img.shape[0], img.shape[1]), lp,
-            #                         '/home/novian/catkin_ws/src/bagfile/car-02n/')
-            print("label for "+namefile+" built")
 
         self.mat.append(mtr)
         self.imgseq.append(namefile)
