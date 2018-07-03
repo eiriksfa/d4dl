@@ -176,13 +176,13 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 c = np.matmul(P, coords)
-                if c[2] > 0:  # Front of camera, TODO: Clipping
+                if c[2] > 0:  # Front of camera
                     coords = np.matmul(trans, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
                     projected.append(coords)
-                    rp.append(coords[0])
-                    cp.append(coords[1])
+                    rp.append(coords[0]-1)
+                    cp.append(coords[1]-1)
             if len(projected) > 2:
                 projected = np.array(projected)
                 polygons.append(projected)
