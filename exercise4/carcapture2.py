@@ -137,7 +137,7 @@ class CameraPose(object):
         self.prop = prop
 
     def _build_polygons(self, P, extrinsics):
-        trans = np.matmul(self.intrinsics, extrinsics)
+        # trans = np.matmul(self.intrinsics, extrinsics)
         polygons = []
         lp = []
         for polygon in self.polygon:
@@ -152,7 +152,8 @@ class CameraPose(object):
                 print(coords)
                 print('============')
                 if c[2] > 0:  # Front of camera
-                    coords = np.matmul(trans, coords)
+                    #coords = np.matmul(trans, coords)
+                    coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
                     projected.append(coords)
