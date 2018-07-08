@@ -210,56 +210,6 @@ def train(epoch, net, optimizer, criterion, device, train):
                 100. * batch_idx / len(train), loss.item()))
 
 
-def train2():
-        for batch_idx, (data, target) in tqdm.tqdm(
-                enumerate(self.train_loader), total=len(self.train_loader),
-                desc='Train epoch=%d' % self.epoch, ncols=80, leave=False):
-            iteration = batch_idx + self.epoch * len(self.train_loader)
-            if self.iteration != 0 and (iteration - 1) != self.iteration:
-                continue  # for resuming
-            self.iteration = iteration
-
-            if self.iteration % self.interval_validate == 0:
-                self.validate()
-
-            assert self.model.training
-
-            if self.cuda:
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data), Variable(target)
-            self.optim.zero_grad()
-            score = self.model(data)
-
-            loss = cross_entropy2d(score, target, size_average=True)
-            loss /= len(data)
-            loss_data = float(loss.data[0])
-            if np.isnan(loss_data):
-                raise ValueError('loss is nan while training')
-            loss.backward()
-            self.optim.step()
-
-            metrics = []
-            lbl_pred = score.data.max(1)[1].cpu().numpy()[:, :, :]
-            lbl_true = target.data.cpu().numpy()
-            acc, acc_cls, mean_iu, fwavacc = \
-                torchfcn.utils.label_accuracy_score(
-                    lbl_true, lbl_pred, n_class=n_class)
-            metrics.append((acc, acc_cls, mean_iu, fwavacc))
-            metrics = np.mean(metrics, axis=0)
-
-            with open(osp.join(self.out, 'log.csv'), 'a') as f:
-                elapsed_time = (
-                        datetime.datetime.now(pytz.timezone('Asia/Tokyo')) -
-                        self.timestamp_start).total_seconds()
-                log = [self.epoch, self.iteration] + [loss_data] + \
-                      metrics.tolist() + [''] * 5 + [elapsed_time]
-                log = map(str, log)
-                f.write(','.join(log) + '\n')
-
-            if self.iteration >= self.max_iter:
-                break
-
-
 # https://github.com/CSAILVision/semantic-segmentation-pytorch/blob/master/utils.py
 def intersectionAndUnion(pred, lab, numClass):
     pred = np.asarray(pred).copy()
@@ -374,11 +324,14 @@ def main():
     criterion = CrossEntropyLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    for e in range(1, 16):
+    dict = None
+    for e in range(1, 100):
         train(e, net, optimizer, criterion, device, dl)
         a = test(net, criterion, device, vl, False, 'v')
+        if a > max(list):
+            dict = net.state_dict()
         accuracy.append(a)
-        torch.save(net.state_dict(), 'snapshots/snapshot_' + str(e) + '.pt')
+    torch.save(dict, 'snapshots/snapshot.pt')
     plt.plot(accuracy, range(len(accuracy)))
     plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
