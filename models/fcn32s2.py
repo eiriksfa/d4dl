@@ -335,8 +335,8 @@ def main():
     plt.plot(accuracy, range(len(accuracy)))
     plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
-    test(net, criterion, device, vl, True, 'v')
-    test(net, criterion, device, tl, True, 't')
+    # test(net, criterion, device, vl, True, 'v')
+    # test(net, criterion, device, tl, True, 't')
 
     torch.save(net.state_dict(), 'snapshots/model.pt')
 
