@@ -222,8 +222,8 @@ def label_accuracy_score(label_trues, label_preds, n_class):
 if __name__ == '__main__':
     # build_labels(engine)
     engine = sa.create_engine('sqlite:///data.db')
-    p1 = Path('/home/habibien/Dokumente/data/cityscape/leftImg8bit_trainvaltest/leftImg8bit/')
-    p2 = Path('/home/habibien/Dokumente/data/cityscape/gtFine_trainvaltest/gtFine/')
-    p3 = Path('/home/habibien/Dokumente/data/cityscape/labelimgs/')
+    p1 = Path('/mnt/disks/data/cityscapes/leftImg8bit/')
+    p2 = Path('/mnt/disks/data/cityscapes/gtFine/')
+    p3 = Path('/mnt/disks/data/cityscapes/labelimgs/')
     import_images(p1, p2, p3, engine)
     print('FINISHED')
