@@ -11,6 +11,7 @@ from distutils.version import LooseVersion
 import torch.nn.functional as F
 from dataloader import ImageSet
 from torch.utils.data import DataLoader
+import cv2
 
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
@@ -251,13 +252,14 @@ def test(net, criterion, device, val, save, pre):
 
             if save:  # one per batch as is
                 for i in range(len(output)):
-                    res2 = utility.output_labels_to_image(output[i].cpu())
-                    plt.imshow(res2)
-                    plt.savefig('images/out_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
-                    plt.imshow(utility.labels_to_image(target[i]))
-                    plt.savefig('images/target_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
-                    plt.imshow(data[i].cpu().numpy().transpose((1, 2, 0)))
-                    plt.savefig('images/inp_' + pre + '_' + str(imgname) + '_' + str(i) + '.png')
+                    out = utility.output_labels_to_image(output[i].cpu())
+                    out = cv2.normalize(out, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                    out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
+                    img = data[i].cpu().numpy().transpose((1, 2, 0))
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    img = cv2.normalize(img, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                    cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+                    cv2.imwrite('images/out_' + pre + '_' + str(imgname) + '_' + str(i) + '.png', out)
             imgname += 1
 
             for i in range(0, len(pred)):
@@ -313,25 +315,23 @@ def main():
     ts = ImageSet(1)
     vs = ImageSet(2, False)
     tts = ImageSet(3, False)
-    dl = DataLoader(ts, batch_size=16)
-    vl = DataLoader(vs, batch_size=16)
-    tl = DataLoader(tts, batch_size=16)
+    dl = DataLoader(ts, batch_size=12)
+    vl = DataLoader(vs, batch_size=12)
+    tl = DataLoader(tts, batch_size=12)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
-    # net.load_state_dict(torch.load('snapshots/load.pt'))
+    #net.load_state_dict(torch.load('/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_21.pt'))
     criterion = CrossEntropyLoss2d()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     accuracy = []
-    dict = None
-    for e in range(1, 100):
+    for e in range(22, 40):
         train(e, net, optimizer, criterion, device, dl)
         a = test(net, criterion, device, vl, False, 'v')
-        if a > max(list):
-            dict = net.state_dict()
+        torch.save(net.state_dict(), '/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_' + str(e) + '.pt')
         accuracy.append(a)
-    torch.save(dict, 'snapshots/snapshot.pt')
+    #torch.save(dict, 'snapshots/snapshot.pt')
     plt.plot(accuracy, range(len(accuracy)))
     plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
