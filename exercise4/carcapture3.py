@@ -1,6 +1,7 @@
 import rospy
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import TransformStamped, Point
 from sensor_msgs.msg import CameraInfo, Image, CompressedImage
+from visualization_msgs.msg import Marker, MarkerArray
 import tf
 from tf import ExtrapolationException, ConnectivityException
 import time
@@ -120,6 +121,7 @@ class CameraPose(object):
     def __init__(self):
         self.tf_listener = tf.TransformListener()
         self.img_pub = rospy.Publisher('output_2/image/compressed', CompressedImage, queue_size=10)
+        self.point_pub = rospy.Publisher('polygon_point', Marker, queue_size=10)
         self.num = 0
         self.broken_amt = 0
         self.imgseq = []
@@ -129,11 +131,46 @@ class CameraPose(object):
         self.prop = None
         self.polygon = load_polygons('/home/novian/term2/dl4ad/repo2/d4dl/exercise4/polygons')
         self.counter = 0
+        self.poly_point_msg = None
         self.intrinsics = np.array(
             [[585.2304272868565, 0.0, 1190.0, 0], [0.0, 585.2304272868565, 640.5, 0], [0.0, 0.0, 1.0, 0.0]])
 
     def callback_camerainfo(self, prop):
         self.prop = prop
+
+    def init_marker(self):
+        marker = Marker()
+        marker.header.frame_id = "/mocap"
+        marker.header.stamp = rospy.get_rostime()
+        marker.ns = 'poly_point'
+        marker.id = 0
+        marker.type = marker.POINTS
+        marker.action = marker.ADD
+
+        #marker.pose.position.x = data[0]
+        #marker.pose.position.y = data[1]
+        #marker.pose.position.z = data[2]
+        marker.pose.orientation.x = 0
+        marker.pose.orientation.y = 0
+        marker.pose.orientation.z = 0
+        marker.pose.orientation.w = 1.0
+
+        marker.scale.x = 0.01
+        marker.scale.y = 0.01
+        marker.scale.z = 0.01
+
+        marker.color.g = 1
+        marker.color.a = 1
+
+        return marker
+
+
+    def add_point_marker(self, marker, cx, cy):
+        point = Point()
+        point.x = cx
+        point.y = cy
+        point.z = 0
+        marker.points.append(point)
 
     def _build_polygons(self, extrinsics):
         polygons = []
@@ -146,6 +183,7 @@ class CameraPose(object):
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 coords = np.matmul(extrinsics, coords)
                 if coords[2][0] > 0.00001:
+                    self.add_point_marker(self.poly_point_msg, r.x, r.y)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
@@ -177,8 +215,8 @@ class CameraPose(object):
         cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
         namefile = str(self.counter) + '_out.png'
         labename = str(self.counter) + '_label.png'
-        cv2.imwrite(os.path.join(path, namefile), out)
-        cv2.imwrite(os.path.join(path, labename), label)
+        #cv2.imwrite(os.path.join(path, namefile), out)
+        #cv2.imwrite(os.path.join(path, labename), label)
         # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
         return out, label
 
@@ -215,10 +253,11 @@ class CameraPose(object):
             extrinsics = build_matrices(rot_m, trans_v)
             print("matrices for "+namefile+" built")
             polygons, lp = self._build_polygons(extrinsics)
+            print(len(polygons))
             print("polygon for "+namefile+" built")
             self.counter += 1
             (image_wpoly, l) = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-07n/')
-            print("image for "+namefile+" built")
+            #print("image for "+namefile+" built")
 
             #publish the image to rviz
             image_msg = CompressedImage()
@@ -227,6 +266,7 @@ class CameraPose(object):
             image_msg.data = np.array(cv2.imencode('.jpg', image_np)[1]).tostring()
 
             self.img_pub.publish(image_msg)
+            self.point_pub.publish(self.poly_point_msg)
 
         self.mat.append(mtr)
         self.imgseq.append(namefile)
@@ -246,6 +286,7 @@ class CameraPose(object):
 
     def listener(self):
         rospy.init_node('listener', anonymous=True)
+        self.poly_point_msg = self.init_marker()
         rospy.Subscriber("output/camera_info", CameraInfo, self.callback_camerainfo)
         rospy.Subscriber("output/image/compressed", CompressedImage, self.callback_camera)
         rospy.on_shutdown(self.hook)
