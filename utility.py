@@ -101,6 +101,10 @@ def import_label_image(image, path, imgid, ltid, engine):
     ensure_dir(path)
     path = path.joinpath(str(imgid) + '.png')
     imsave(path, image)
+    return import_label_image_sub(path, imgid, ltid, engine)
+
+
+def import_label_image_sub(path, imgid, ltid, engine):
     res = sql.execute('select MAX(ID) from Labels', engine)
     iid = res.first()[0]
     iid = 0 if iid is None else iid + 1
@@ -152,6 +156,23 @@ def import_images(ip, lp, op, engine, polyname='gtFine_polygons', imgname='leftI
             nop = op.joinpath(v + '/' + s)
             import_images_sub(subdir, nlp, nop, engine, polyname=polyname, imgname=imgname, dtype=p[v])
             print('one subdir done')
+
+
+def import_car_images(p, engine, imgname='out', labelname='label'):
+    dirn = 0
+    for dir in [d for d in p.iterdir()]:
+        dirn += 1
+        t = 2 if (dirn % 6) == 0 else 1
+        for file in [d for d in dir.iterdir()]:
+            n = file.stem.split('_')
+            it = n[1]
+            ii = n[0]
+            if it == labelname:
+                continue
+            elif it == imgname:
+                iid = import_image(file, 'None', 2380, 1281, engine, t)
+                f2 = dir.joinpath(ii + '_' + labelname + '.png')
+                import_label_image_sub(f2, iid, t, engine)
 
 
 def get_imageset(engine, type=1):
@@ -220,10 +241,13 @@ def label_accuracy_score(label_trues, label_preds, n_class):
 
 
 if __name__ == '__main__':
+    p = Path('/mnt/disks/data/images')
+    engine = sa.create_engine('sqlite:///cardata_1.db')
+    import_car_images(p, engine)
     # build_labels(engine)
-    engine = sa.create_engine('sqlite:///data.db')
-    p1 = Path('/mnt/disks/data/cityscapes/leftImg8bit/')
-    p2 = Path('/mnt/disks/data/cityscapes/gtFine/')
-    p3 = Path('/mnt/disks/data/cityscapes/labelimgs/')
-    import_images(p1, p2, p3, engine)
+    # engine = sa.create_engine('sqlite:///data2.db')
+    # p1 = Path('/mnt/disks/data/cityscapes/leftImg8bit/')
+    # p2 = Path('/mnt/disks/data/cityscapes/gtFine/')
+    # p3 = Path('/mnt/disks/data/cityscapes/labelimgs/')
+    # import_images(p1, p2, p3, engine)
     print('FINISHED')

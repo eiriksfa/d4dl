@@ -98,7 +98,7 @@ class ImageSet(Dataset):
         self._build_dataset()
 
     def _build_dataset(self):
-        engine = sa.create_engine('sqlite:///data.db')  #
+        engine = sa.create_engine('sqlite:///cardata_1.db')  #
         self.data = utility.get_imageset(engine, self.itype)
 
     def __len__(self):
