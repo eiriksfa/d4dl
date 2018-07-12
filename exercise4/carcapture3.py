@@ -155,9 +155,9 @@ class CameraPose(object):
         marker.pose.orientation.z = 0
         marker.pose.orientation.w = 1.0
 
-        marker.scale.x = 0.01
-        marker.scale.y = 0.01
-        marker.scale.z = 0.01
+        marker.scale.x = 0.02
+        marker.scale.y = 0.02
+        marker.scale.z = 0.02
 
         marker.color.g = 1
         marker.color.a = 1
@@ -268,6 +268,7 @@ class CameraPose(object):
             self.img_pub.publish(image_msg)
             self.point_pub.publish(self.poly_point_msg)
 
+        self.poly_point_msg.points = []
         self.mat.append(mtr)
         self.imgseq.append(namefile)
         self.timestamp.append(img.header.stamp)
