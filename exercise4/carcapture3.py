@@ -182,6 +182,7 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 coords = np.matmul(extrinsics, coords)
+                #self.add_point_marker(self.poly_point_msg, r.x, r.y)
                 if coords[2][0] > 0.00001:
                     self.add_point_marker(self.poly_point_msg, r.x, r.y)
                     coords = np.matmul(self.intrinsics, coords)
@@ -256,14 +257,14 @@ class CameraPose(object):
             print(len(polygons))
             print("polygon for "+namefile+" built")
             self.counter += 1
-            (image_wpoly, l) = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-07n/')
+            (image_wpoly, l) = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-new-01/')
             #print("image for "+namefile+" built")
 
             #publish the image to rviz
             image_msg = CompressedImage()
             image_msg.header.stamp = rospy.Time.now()
             image_msg.format = "jpeg"
-            image_msg.data = np.array(cv2.imencode('.jpg', image_np)[1]).tostring()
+            image_msg.data = np.array(cv2.imencode('.jpg', image_wpoly)[1]).tostring()
 
             self.img_pub.publish(image_msg)
             self.point_pub.publish(self.poly_point_msg)
@@ -283,6 +284,8 @@ class CameraPose(object):
             'broken': self.broken,
             'mat': self.mat}
         df = pd.DataFrame(rawdata, columns=['imgseq', 'timestamp', 'broken', 'mat'])
+        print("broken : " + str(self.broken_amt))
+        print("created : " + str(self.counter))
         # df.to_csv('car-01.csv')
 
     def listener(self):
