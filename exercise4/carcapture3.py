@@ -17,6 +17,7 @@ import signal
 import image_geometry
 from pathlib import Path
 from scipy.misc import imsave
+import matplotlib.path as mplPath
 
 
 def unit_vector(data, axis=None, out=None):
@@ -175,6 +176,7 @@ class CameraPose(object):
     def _build_polygons(self, extrinsics):
         polygons = []
         lp = []
+        lane = []
         for polygon in self.polygon:
             projected = []
             cp = []
@@ -195,7 +197,19 @@ class CameraPose(object):
                 projected = np.array(projected)
                 polygons.append(projected)
                 lp.append((rp, cp))
-        return polygons, lp
+
+                lane_class = 0 # default : other lane
+                poly_forcheck = mplPath.Path(projected)
+                lb = poly_forcheck.contains_point((0,1280)) # left bottom
+                cb = poly_forcheck.contains_point((1300,1280)) # (almost) center bottom
+                if lb and cb :
+                    # wide polygon = intersection
+                    lane_class = 2
+                elif not lb and cb :
+                    # only in center = our lane
+                    lane_class = 1
+                lane.append(lane_class)
+        return polygons, lane
 
     def _build_label_image(self, shape, polygons, path):
         img = np.zeros(shape)
@@ -207,17 +221,27 @@ class CameraPose(object):
         namefile = str(self.counter) + '_label_out.png'
         imsave(os.path.join(path, namefile), img)
 
-    def _build_image(self, polygons, img, path):
+    def _build_image(self, polygons, lane, img, path):
         out = img.copy()
         label = np.zeros(out.shape, np.uint8)
-        for p in polygons:
-            cv2.fillPoly(img, [p], (0, 255, 0))
-            cv2.fillPoly(label, [p], (0, 255, 0))
+        for idx in range(len(polygons)):
+            if lane[idx]==0:
+                # other lane, red
+                cv2.fillPoly(img, [polygons[idx]], (0, 0, 255))
+                cv2.fillPoly(label, [polygons[idx]], (0, 0, 255))
+            elif lane[idx]==1:
+                # our lane, blue
+                cv2.fillPoly(img, [polygons[idx]], (255, 0, 0))
+                cv2.fillPoly(label, [polygons[idx]], (255, 0, 0))
+            else:
+                #intersection, green
+                cv2.fillPoly(img, [polygons[idx]], (0, 255, 0))
+                cv2.fillPoly(label, [polygons[idx]], (0, 255, 0))
         cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
         namefile = str(self.counter) + '_out.png'
         labename = str(self.counter) + '_label.png'
-        #cv2.imwrite(os.path.join(path, namefile), out)
-        #cv2.imwrite(os.path.join(path, labename), label)
+        cv2.imwrite(os.path.join(path, namefile), out)
+        cv2.imwrite(os.path.join(path, labename), label)
         # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
         return out, label
 
@@ -253,11 +277,11 @@ class CameraPose(object):
 
             extrinsics = build_matrices(rot_m, trans_v)
             print("matrices for "+namefile+" built")
-            polygons, lp = self._build_polygons(extrinsics)
+            polygons, lane = self._build_polygons(extrinsics)
             print(len(polygons))
             print("polygon for "+namefile+" built")
             self.counter += 1
-            (image_wpoly, l) = self._build_image(polygons, image_np, '/home/novian/catkin_ws/src/bagfile/car-new-01/')
+            (image_wpoly, l) = self._build_image(polygons, lane, image_np, '/home/novian/catkin_ws/src/bagfile/car-new-01/')
             #print("image for "+namefile+" built")
 
             #publish the image to rviz
