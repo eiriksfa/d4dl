@@ -314,31 +314,31 @@ def main():
 
     ts = ImageSet(1)
     vs = ImageSet(2, False)
-    tts = ImageSet(3, False)
+    # tts = ImageSet(3, False)
     dl = DataLoader(ts, batch_size=12)
-    vl = DataLoader(vs, batch_size=12)
-    tl = DataLoader(tts, batch_size=12)
+    vl = DataLoader(vs, batch_size=2)
+    # tl = DataLoader(tts, batch_size=12)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
-    #net.load_state_dict(torch.load('/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_21.pt'))
+    net.load_state_dict(torch.load('snapshots/snapshot_99.pt'))
     criterion = CrossEntropyLoss2d()
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
-    accuracy = []
-    for e in range(22, 40):
-        train(e, net, optimizer, criterion, device, dl)
-        a = test(net, criterion, device, vl, False, 'v')
-        torch.save(net.state_dict(), '/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_' + str(e) + '.pt')
-        accuracy.append(a)
+    # optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
+    # accuracy = []
+    # for e in range(22, 40):
+    #     train(e, net, optimizer, criterion, device, dl)
+    #     a = test(net, criterion, device, vl, False, 'v')
+    #     torch.save(net.state_dict(), '/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_' + str(e) + '.pt')
+    #     accuracy.append(a)
     #torch.save(dict, 'snapshots/snapshot.pt')
-    plt.plot(accuracy, range(len(accuracy)))
-    plt.savefig('images/plot.png')
+    # plt.plot(accuracy, range(len(accuracy)))
+    # plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
-    # test(net, criterion, device, vl, True, 'v')
+    test(net, criterion, device, vl, True, 'v')
     # test(net, criterion, device, tl, True, 't')
 
-    torch.save(net.state_dict(), 'snapshots/model.pt')
+    # torch.save(net.state_dict(), 'snapshots/model.pt')
 
 
 if __name__ == '__main__':
