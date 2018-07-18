@@ -323,13 +323,13 @@ def main():
     vs = ImageSet(2, False)
     # tts = ImageSet(3, False)
     dl = DataLoader(ts, batch_size=12)
-    vl = DataLoader(vs, batch_size=1)
+    vl = DataLoader(vs, batch_size=4)
     # tl = DataLoader(tts, batch_size=12)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
-    net.load_state_dict(torch.load('snapshots/snapshot_99.pt'))
+    net.load_state_dict(torch.load('snapshots/snapshot_1.pt'))
     criterion = CrossEntropyLoss2d()
     # optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
     # accuracy = []
