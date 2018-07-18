@@ -184,9 +184,9 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 coords = np.matmul(extrinsics, coords)
-                #self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                self.add_point_marker(self.poly_point_msg, r.x, r.y)
                 if coords[2][0] > 0.00001:
-                    self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                    #self.add_point_marker(self.poly_point_msg, r.x, r.y)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
@@ -223,41 +223,50 @@ class CameraPose(object):
 
     def _build_image(self, polygons, lane, img, path):
         out = img.copy()
-        label = np.zeros(out.shape, np.uint8)
+        label_1c = np.zeros(out.shape, np.uint8)
+        label_3c = np.zeros(out.shape, np.uint8)
         for idx in range(len(polygons)):
+            # three-class labels
             if lane[idx]==0:
                 # other lane, red
                 cv2.fillPoly(img, [polygons[idx]], (0, 0, 255))
-                cv2.fillPoly(label, [polygons[idx]], (0, 0, 255))
+                cv2.fillPoly(label_3c, [polygons[idx]], (0, 0, 255))
             elif lane[idx]==1:
                 # our lane, blue
                 cv2.fillPoly(img, [polygons[idx]], (255, 0, 0))
-                cv2.fillPoly(label, [polygons[idx]], (255, 0, 0))
+                cv2.fillPoly(label_3c, [polygons[idx]], (255, 0, 0))
             else:
                 #intersection, green
                 cv2.fillPoly(img, [polygons[idx]], (0, 255, 0))
-                cv2.fillPoly(label, [polygons[idx]], (0, 255, 0))
-        cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+                cv2.fillPoly(label_3c, [polygons[idx]], (0, 255, 0))
+
+            # one-class label
+            cv2.fillPoly(label_1c, [polygons[idx]], (0, 255, 0))
+
+        #cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
         namefile = str(self.counter) + '_out.png'
-        labename = str(self.counter) + '_label.png'
+        labename_1c = str(self.counter) + '_label_1c.png'
+        labename_3c = str(self.counter) + '_label_3c.png'
         cv2.imwrite(os.path.join(path, namefile), out)
-        cv2.imwrite(os.path.join(path, labename), label)
+        cv2.imwrite(os.path.join(path, labename_1c), label_1c)
+        cv2.imwrite(os.path.join(path, labename_3c), label_3c)
         # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
-        return out, label
+        print self.counter
+        return out, label_3c
 
     def callback_camera(self, img):
         namefile = '{}{:06d}{}'.format('car02-frame', self.num, '.png')
         broken = False
         try:
-            print('got image')
+            #print('got image')
             self.num = self.num + 1
             np_arr = np.fromstring(img.data, np.uint8)
             image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         except CvBridgeError as e:
-            print(e)
+            #print(e)
             broken = True
-        else:
-            print("saving " + namefile)
+        #else:
+            #print("saving " + namefile)
 
         mtr = []
         trans = [0.0, 0.0, 0.0]
@@ -267,7 +276,7 @@ class CameraPose(object):
             (trans, rot) = self.tf_listener.lookupTransform('/mocap', 'front_cam', img.header.stamp)
             mtr = self.tf_listener.fromTranslationRotation(trans, rot)
         except (ExtrapolationException, ConnectivityException) as e:
-            print(e)
+            #print(e)
             broken = True
             self.broken_amt += 1
 
@@ -276,29 +285,29 @@ class CameraPose(object):
             trans_v = mtr[0:3, 3:4]
 
             extrinsics = build_matrices(rot_m, trans_v)
-            print("matrices for "+namefile+" built")
+            #print("matrices for "+namefile+" built")
             polygons, lane = self._build_polygons(extrinsics)
-            print(len(polygons))
-            print("polygon for "+namefile+" built")
+            #print(len(polygons))
+            #print("polygon for "+namefile+" built")
             self.counter += 1
-            (image_wpoly, l) = self._build_image(polygons, lane, image_np, '/home/novian/catkin_ws/src/bagfile/car-new-01/')
+            (image_wpoly, l) = self._build_image(polygons, lane, image_np, '/home/novian/catkin_ws/src/bagfile/car-new-01')
             #print("image for "+namefile+" built")
 
             #publish the image to rviz
-            image_msg = CompressedImage()
-            image_msg.header.stamp = rospy.Time.now()
-            image_msg.format = "jpeg"
-            image_msg.data = np.array(cv2.imencode('.jpg', image_wpoly)[1]).tostring()
+            #image_msg = CompressedImage()
+            #image_msg.header.stamp = rospy.Time.now()
+            #image_msg.format = "jpeg"
+            #image_msg.data = np.array(cv2.imencode('.jpg', image_wpoly)[1]).tostring()
 
-            self.img_pub.publish(image_msg)
+            #self.img_pub.publish(image_msg)
             self.point_pub.publish(self.poly_point_msg)
 
         self.poly_point_msg.points = []
-        self.mat.append(mtr)
-        self.imgseq.append(namefile)
-        self.timestamp.append(img.header.stamp)
-        self.broken.append(broken)
-        print("done for "+namefile)
+        #self.mat.append(mtr)
+        #self.imgseq.append(namefile)
+        #self.timestamp.append(img.header.stamp)
+        #self.broken.append(broken)
+        #print("done for "+namefile)
 
     def hook(self):
         print('shutdown')
@@ -323,4 +332,5 @@ class CameraPose(object):
 
 if __name__ == '__main__':
     cp = CameraPose()
+    print("we are ready")
     cp.listener()
