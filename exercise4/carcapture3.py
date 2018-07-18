@@ -184,9 +184,9 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 coords = np.matmul(extrinsics, coords)
-                self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                #self.add_point_marker(self.poly_point_msg, r.x, r.y)
                 if coords[2][0] > 0.00001:
-                    #self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                    self.add_point_marker(self.poly_point_msg, r.x, r.y)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
@@ -243,13 +243,13 @@ class CameraPose(object):
             # one-class label
             cv2.fillPoly(label_1c, [polygons[idx]], (0, 255, 0))
 
-        #cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+        cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
         namefile = str(self.counter) + '_out.png'
         labename_1c = str(self.counter) + '_label_1c.png'
         labename_3c = str(self.counter) + '_label_3c.png'
-        cv2.imwrite(os.path.join(path, namefile), out)
-        cv2.imwrite(os.path.join(path, labename_1c), label_1c)
-        cv2.imwrite(os.path.join(path, labename_3c), label_3c)
+        #cv2.imwrite(os.path.join(path, namefile), out)
+        #cv2.imwrite(os.path.join(path, labename_1c), label_1c)
+        #cv2.imwrite(os.path.join(path, labename_3c), label_3c)
         # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
         print self.counter
         return out, label_3c
@@ -294,12 +294,12 @@ class CameraPose(object):
             #print("image for "+namefile+" built")
 
             #publish the image to rviz
-            #image_msg = CompressedImage()
-            #image_msg.header.stamp = rospy.Time.now()
-            #image_msg.format = "jpeg"
-            #image_msg.data = np.array(cv2.imencode('.jpg', image_wpoly)[1]).tostring()
+            image_msg = CompressedImage()
+            image_msg.header.stamp = rospy.Time.now()
+            image_msg.format = "jpeg"
+            image_msg.data = np.array(cv2.imencode('.jpg', image_wpoly)[1]).tostring()
 
-            #self.img_pub.publish(image_msg)
+            self.img_pub.publish(image_msg)
             self.point_pub.publish(self.poly_point_msg)
 
         self.poly_point_msg.points = []
