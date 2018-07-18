@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from dataloader import ImageSet
 from torch.utils.data import DataLoader
 import cv2
+import time
 
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
@@ -245,7 +246,9 @@ def test(net, criterion, device, val, save, pre):
         imgname = 1
         for data, target in val:
             data, target = data.to(device), target.to(device)
+            t = time.time()
             output = net(data)
+            print(time.time() - t)
             test_loss += criterion(output, target).item()  # sum up batch loss
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
             pred = torch.squeeze(pred)
@@ -261,11 +264,15 @@ def test(net, criterion, device, val, save, pre):
                     cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
                     cv2.imwrite('images/out_' + pre + '_' + str(imgname) + '_' + str(i) + '.png', out)
             imgname += 1
-
-            for i in range(0, len(pred)):
-                intr, uni = intersectionAndUnion(pred[i], target[i], 3)
+            if val.batch_size == 1:
+                intr, uni = intersectionAndUnion(pred, target, 3)
                 intersect_all += intr
                 union_all += uni
+            else:
+                for i in range(0, len(pred)):
+                    intr, uni = intersectionAndUnion(pred[i], target[i], 3)
+                    intersect_all += intr
+                    union_all += uni
 
             correct += pred.eq(target.view_as(pred)).sum().item()
 
@@ -316,7 +323,7 @@ def main():
     vs = ImageSet(2, False)
     # tts = ImageSet(3, False)
     dl = DataLoader(ts, batch_size=12)
-    vl = DataLoader(vs, batch_size=2)
+    vl = DataLoader(vs, batch_size=1)
     # tl = DataLoader(tts, batch_size=12)
 
     #single_pass(net, device, vl)

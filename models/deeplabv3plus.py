@@ -11,8 +11,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .resnet import _ConvBatchNormReLU, _ResBlock, _ResBlockMG
-from .deeplabv3 import _ASPPModule
+from models.resnet import _ConvBatchNormReLU, _ResBlock, _ResBlockMG
+from models.deeplabv3 import _ASPPModule
 
 
 class DeepLabV3Plus(nn.Sequential):
