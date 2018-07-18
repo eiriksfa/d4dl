@@ -56,7 +56,8 @@ background = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 19, 20, 21, 22
 image_label = {
     (0, 0, 0): 0,
     (0, 0, 255): 1,
-    (0, 255, 0): 2
+    (0, 255, 0): 2,
+    (255, 0, 0): 3
 }
 color_map = np.ndarray(shape=(256 * 256 * 256), dtype='int64')
 color_map[:] = 0
@@ -68,7 +69,8 @@ for rgb, idx in image_label.items():
 label_image = {
         0: (0, 0, 0),
         1: (0, 0, 255),
-        2: (0, 255, 0)
+        2: (0, 255, 0),
+        3: (255, 0, 0)
     }
 likeys, livalues = zip(*label_image.items())
 limap = np.empty((max(likeys) + 1, 3), int)
@@ -175,6 +177,21 @@ def import_car_images(p, engine, imgname='out', labelname='label'):
                 import_label_image_sub(f2, iid, t, engine)
 
 
+def import_car_images2(p, engine, imgname='out', labelname='label', labeltypename='3c'):
+    i = 0
+    for file in [d for d in p.iterdir()]:
+        t = 2 if (i % 6) == 0 else 1
+        n = file.stem.split('_')
+        it = n[1]
+        ii = n[0]
+        if not it == imgname:
+            continue
+        iid = import_image(file, 'None', 2380, 1281, engine, t)
+        f2 = p.joinpath(ii + '_' + labelname + '_' + labeltypename + '.png')
+        import_label_image_sub(f2, iid, t, engine)
+        i += 1
+
+
 def get_imageset(engine, type=1):
     s = 'SELECT Images.Image as IImage, Labels.Image as LImage FROM Images ' \
         'inner join Labels on Images.ID=Labels.IID WHERE Images.IType=?'
@@ -241,8 +258,8 @@ def label_accuracy_score(label_trues, label_preds, n_class):
 
 
 if __name__ == '__main__':
-    p = Path('E:/images')
-    engine = sa.create_engine('sqlite:///cardata_1.db')
+    p = Path('/mnt/disks/data/segment')
+    engine = sa.create_engine('sqlite:///data.db')
     import_car_images(p, engine)
     # build_labels(engine)
     # engine = sa.create_engine('sqlite:///data2.db')
