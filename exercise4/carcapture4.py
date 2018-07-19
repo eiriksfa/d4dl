@@ -255,7 +255,8 @@ class CameraPose(object):
         return out, label_1c, label_3c
 
     def callback_camera(self, img):
-        namefile = '{}{:06d}{}'.format('car02-frame', self.num, '.png')
+        #namefile = '{}{:06d}{}'.format('car02-frame', self.num, '.png')
+        namefile=""
         broken = False
         try:
             #print('got image')
@@ -266,8 +267,8 @@ class CameraPose(object):
             #print(e)
             broken = True
         else:
-            namefile = str(self.num) + '_out.png'
-            cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-03/', namefile), image_np)
+            namefile = '{:03d}{}'.format(self.num, '_out.png')
+            cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-234/', namefile), image_np)
             #print("saving " + namefile)
 
         mtr = []
@@ -304,9 +305,9 @@ class CameraPose(object):
 
         self.poly_point_msg.points = []
         #self.mat.append(mtr)
-        #self.imgseq.append(namefile)
-        #self.timestamp.append(img.header.stamp)
-        #self.broken.append(broken)
+        self.imgseq.append(namefile)
+        self.timestamp.append(img.header.stamp)
+        self.broken.append(broken)
         #print("done for "+namefile)
 
     def publish_image(self,publisher,image):
@@ -321,12 +322,11 @@ class CameraPose(object):
         rawdata = {
             'imgseq': self.imgseq,
             'timestamp': self.timestamp,
-            'broken': self.broken,
-            'mat': self.mat}
-        df = pd.DataFrame(rawdata, columns=['imgseq', 'timestamp', 'broken', 'mat'])
+            'broken': self.broken}
+        df = pd.DataFrame(rawdata, columns=['imgseq', 'timestamp', 'broken'])
         print("broken : " + str(self.broken_amt))
         print("created : " + str(self.counter))
-        # df.to_csv('car-01.csv')
+        df.to_csv('/home/novian/catkin_ws/src/bagfile/car-234.csv')
 
     def listener(self):
         rospy.init_node('listener', anonymous=True)
