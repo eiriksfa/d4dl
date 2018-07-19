@@ -67,70 +67,70 @@ class CrossEntropyLoss2d(nn.Module):
 
 
 class FCN32s(nn.Module):
-    def __init__(self, n_class=3):
+    def __init__(self, n_class=4):
         super(FCN32s, self).__init__()
         # conv1
-        self.conv1_1 = nn.Conv2d(3, 32, 3, padding=1)
-        self.batch1_1 = nn.BatchNorm2d(32)
+        self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
+        self.batch1_1 = nn.BatchNorm2d(64)
         self.relu1_1 = nn.ReLU(inplace=True)
-        self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
-        self.batch1_2 = nn.BatchNorm2d(32)
+        self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.batch1_2 = nn.BatchNorm2d(64)
         self.relu1_2 = nn.ReLU(inplace=True)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/2
 
         # conv2
-        self.conv2_1 = nn.Conv2d(32, 64, 3, padding=1)
-        self.batch2_1 = nn.BatchNorm2d(64)
+        self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
+        self.batch2_1 = nn.BatchNorm2d(128)
         self.relu2_1 = nn.ReLU(inplace=True)
-        self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.batch2_2 = nn.BatchNorm2d(64)
+        self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.batch2_2 = nn.BatchNorm2d(128)
         self.relu2_2 = nn.ReLU(inplace=True)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/4
         # conv3
-        self.conv3_1 = nn.Conv2d(64, 128, 3, padding=1)
-        self.batch3_1 = nn.BatchNorm2d(128)
+        self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
+        self.batch3_1 = nn.BatchNorm2d(256)
         self.relu3_1 = nn.ReLU(inplace=True)
-        self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.batch3_2 = nn.BatchNorm2d(128)
+        self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch3_2 = nn.BatchNorm2d(256)
         self.relu3_2 = nn.ReLU(inplace=True)
-        self.conv3_3 = nn.Conv2d(128, 128, 3, padding=1)
-        self.batch3_3 = nn.BatchNorm2d(128)
+        self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch3_3 = nn.BatchNorm2d(256)
         self.relu3_3 = nn.ReLU(inplace=True)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/8
 
         # conv4
-        self.conv4_1 = nn.Conv2d(128, 256, 3, padding=1)
-        self.batch4_1 = nn.BatchNorm2d(256)
+        self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
+        self.batch4_1 = nn.BatchNorm2d(512)
         self.relu4_1 = nn.ReLU(inplace=True)
-        self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch4_2 = nn.BatchNorm2d(256)
+        self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.batch4_2 = nn.BatchNorm2d(512)
         self.relu4_2 = nn.ReLU(inplace=True)
-        self.conv4_3 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch4_3 = nn.BatchNorm2d(256)
+        self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
+        self.batch4_3 = nn.BatchNorm2d(512)
         self.relu4_3 = nn.ReLU(inplace=True)
         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/16
         # conv5
-        self.conv5_1 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch5_1 = nn.BatchNorm2d(256)
+        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
+        self.batch5_1 = nn.BatchNorm2d(512)
         self.relu5_1 = nn.ReLU(inplace=True)
-        self.conv5_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch5_2 = nn.BatchNorm2d(256)
+        self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.batch5_2 = nn.BatchNorm2d(512)
         self.relu5_2 = nn.ReLU(inplace=True)
-        self.conv5_3 = nn.Conv2d(256, 256, 3)
-        self.batch5_3 = nn.BatchNorm2d(256)
+        self.conv5_3 = nn.Conv2d(512, 512, 3)
+        self.batch5_3 = nn.BatchNorm2d(512)
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
         # fc6
-        self.fc6 = nn.Conv2d(256, 2048, 7, padding=3)
+        self.fc6 = nn.Conv2d(512, 4096, 7, padding=3)
         self.relu6 = nn.ReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
         # fc7
-        self.fc7 = nn.Conv2d(2048, 2048, 1)
+        self.fc7 = nn.Conv2d(4096, 4096, 1)
         self.relu7 = nn.ReLU(inplace=True)
         self.drop7 = nn.Dropout2d()
 
-        self.score_fr = nn.Conv2d(2048, n_class, 1)
+        self.score_fr = nn.Conv2d(4096, n_class, 1)
         self.upscore = nn.ConvTranspose2d(n_class, n_class, 64, stride=32, bias=False)
         #self.upscore = nn.UpsamplingBilinear2d(scale_factor=2)
 
@@ -322,27 +322,27 @@ def main():
     ts = ImageSet(1)
     vs = ImageSet(2, False)
     # tts = ImageSet(3, False)
-    dl = DataLoader(ts, batch_size=12)
+    dl = DataLoader(ts, batch_size=24)
     vl = DataLoader(vs, batch_size=4)
     # tl = DataLoader(tts, batch_size=12)
 
     #single_pass(net, device, vl)
 
     #criterion = nn.NLLLoss2d()
-    net.load_state_dict(torch.load('snapshots/snapshot_1.pt'))
+    #net.load_state_dict(torch.load('snapshots/snapshot_1.pt'))
     criterion = CrossEntropyLoss2d()
-    # optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
-    # accuracy = []
-    # for e in range(22, 40):
-    #     train(e, net, optimizer, criterion, device, dl)
-    #     a = test(net, criterion, device, vl, False, 'v')
-    #     torch.save(net.state_dict(), '/mnt/disks/data/d4dl/d4dl/snapshots/snapshot_' + str(e) + '.pt')
-    #     accuracy.append(a)
+    optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
+    accuracy = []
+    for e in range(1, 100):
+        train(e, net, optimizer, criterion, device, dl)
+        a = test(net, criterion, device, vl, False, 'v')
+        torch.save(net.state_dict(), '/mnt/disks/data/d4dl/snapshots/snapshot_' + str(e) + '.pt')
+        accuracy.append(a)
     #torch.save(dict, 'snapshots/snapshot.pt')
     # plt.plot(accuracy, range(len(accuracy)))
     # plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
-    test(net, criterion, device, vl, True, 'v')
+    # test(net, criterion, device, vl, True, 'v')
     # test(net, criterion, device, tl, True, 't')
 
     # torch.save(net.state_dict(), 'snapshots/model.pt')
