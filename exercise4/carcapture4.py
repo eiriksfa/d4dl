@@ -122,6 +122,7 @@ class CameraPose(object):
     def __init__(self):
         self.tf_listener = tf.TransformListener()
         self.img_pub = rospy.Publisher('output_2/image/compressed', CompressedImage, queue_size=10)
+        self.res_pub = rospy.Publisher('output_3/image/compressed', CompressedImage, queue_size=10)
         self.point_pub = rospy.Publisher('polygon_point', Marker, queue_size=10)
         self.num = 0
         self.broken_amt = 0
@@ -267,8 +268,11 @@ class CameraPose(object):
             #print(e)
             broken = True
         else:
-            namefile = '{:03d}{}'.format(self.num, '_out.png')
-            cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-234/', namefile), image_np)
+            #namefile = '{:03d}{}'.format(self.num, '_out.png')
+            #cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-234/', namefile), image_np)
+
+            namefile_res = '{:03d}{}'.format(self.num, '_out.png')
+            image_res = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images/',namefile_res))
             #print("saving " + namefile)
 
         mtr = []
@@ -303,11 +307,13 @@ class CameraPose(object):
             #publish seen points of polygons to rviz
             self.point_pub.publish(self.poly_point_msg)
 
+        self.publish_image(self.res_pub, image_res)
+
         self.poly_point_msg.points = []
         #self.mat.append(mtr)
-        self.imgseq.append(namefile)
-        self.timestamp.append(img.header.stamp)
-        self.broken.append(broken)
+        #self.imgseq.append(namefile)
+        #self.timestamp.append(img.header.stamp)
+        #self.broken.append(broken)
         #print("done for "+namefile)
 
     def publish_image(self,publisher,image):
@@ -326,7 +332,7 @@ class CameraPose(object):
         df = pd.DataFrame(rawdata, columns=['imgseq', 'timestamp', 'broken'])
         print("broken : " + str(self.broken_amt))
         print("created : " + str(self.counter))
-        df.to_csv('/home/novian/catkin_ws/src/bagfile/car-234.csv')
+        #df.to_csv('/home/novian/catkin_ws/src/bagfile/car-234.csv')
 
     def listener(self):
         rospy.init_node('listener', anonymous=True)
