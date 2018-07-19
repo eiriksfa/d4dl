@@ -260,7 +260,7 @@ def label_accuracy_score(label_trues, label_preds, n_class):
 if __name__ == '__main__':
     p = Path('/mnt/disks/data/segment')
     engine = sa.create_engine('sqlite:///data.db')
-    import_car_images(p, engine)
+    import_car_images2(p, engine)
     # build_labels(engine)
     # engine = sa.create_engine('sqlite:///data2.db')
     # p1 = Path('/mnt/disks/data/cityscapes/leftImg8bit/')
