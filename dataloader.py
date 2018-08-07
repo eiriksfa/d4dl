@@ -92,14 +92,19 @@ class Transformer:
 
 class ImageSet(Dataset):
 
-    def __init__(self, itype, tf=True):
+    def __init__(self, itype, tf=True, t=False):
+        super(ImageSet, self).__init__()
         self.transformer = Transformer(tf)
         self.itype = itype
+        self.t = t
         self._build_dataset()
 
     def _build_dataset(self):
-        engine = sa.create_engine('sqlite:///data.db')  #
-        self.data = utility.get_imageset(engine, self.itype)
+        if not self.t:
+            engine = sa.create_engine('sqlite:///cardata_1.db')  #
+            self.data = utility.get_imageset(engine, self.itype)
+        else:
+            self.data = [d for d in Path('E:/testimages').iterdir()]
 
     def __len__(self):
         return len(self.data)
@@ -111,13 +116,19 @@ class ImageSet(Dataset):
         return img
 
     def _process_image(self, image):
-        (p1, p2) = image
-        image = self._get_image(p1)
-        target = self._get_image(p2)
+        if not self.t:
+            (p1, p2) = image
+            image = self._get_image(p1)
+            target = self._get_image(p2)
+        else:
+            image = self._get_image(image)
+            target = np.zeros(image.shape, dtype=np.uint8)
         return self.transformer((image, target))
 
     def __getitem__(self, item):
         image = self._process_image(self.data[item])
+        if self.t:
+            image = (image[0], image[1], self.data[item].stem)
         return image
 
 

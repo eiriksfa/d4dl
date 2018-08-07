@@ -69,7 +69,7 @@ for rgb, idx in image_label.items():
 label_image = {
         0: (0, 0, 0),
         1: (0, 0, 255),
-        2: (0, 255, 0),
+        2: (0, 0, 255),
         3: (255, 0, 0)
     }
 likeys, livalues = zip(*label_image.items())

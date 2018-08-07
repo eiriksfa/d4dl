@@ -5,17 +5,14 @@ from torchvision import transforms
 import torch.optim as optim
 from skimage import io
 import numpy as np
-from scipy.ndimage import imread
 import matplotlib.pyplot as plt
 import utility
 from distutils.version import LooseVersion
 import torch.nn.functional as F
-from torchvision.transforms import functional as func
 from dataloader import ImageSet
 from torch.utils.data import DataLoader
 import cv2
 import time
-from pathlib import Path
 
 
 # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/surgery.py
@@ -69,71 +66,71 @@ class CrossEntropyLoss2d(nn.Module):
         return self.nll_loss(F.log_softmax(inputs), targets)
 
 
-class FCN32s2(nn.Module):
-    def __init__(self, n_class=4):
-        super(FCN32s2, self).__init__()
+class FCN32s(nn.Module):
+    def __init__(self, n_class=3):
+        super(FCN32s, self).__init__()
         # conv1
-        self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
-        self.batch1_1 = nn.BatchNorm2d(64)
+        self.conv1_1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.batch1_1 = nn.BatchNorm2d(32)
         self.relu1_1 = nn.ReLU(inplace=True)
-        self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.batch1_2 = nn.BatchNorm2d(64)
+        self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
+        self.batch1_2 = nn.BatchNorm2d(32)
         self.relu1_2 = nn.ReLU(inplace=True)
         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/2
 
         # conv2
-        self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
-        self.batch2_1 = nn.BatchNorm2d(128)
+        self.conv2_1 = nn.Conv2d(32, 64, 3, padding=1)
+        self.batch2_1 = nn.BatchNorm2d(64)
         self.relu2_1 = nn.ReLU(inplace=True)
-        self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.batch2_2 = nn.BatchNorm2d(128)
+        self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.batch2_2 = nn.BatchNorm2d(64)
         self.relu2_2 = nn.ReLU(inplace=True)
         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/4
         # conv3
-        self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
-        self.batch3_1 = nn.BatchNorm2d(256)
+        self.conv3_1 = nn.Conv2d(64, 128, 3, padding=1)
+        self.batch3_1 = nn.BatchNorm2d(128)
         self.relu3_1 = nn.ReLU(inplace=True)
-        self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch3_2 = nn.BatchNorm2d(256)
+        self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.batch3_2 = nn.BatchNorm2d(128)
         self.relu3_2 = nn.ReLU(inplace=True)
-        self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
-        self.batch3_3 = nn.BatchNorm2d(256)
+        self.conv3_3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.batch3_3 = nn.BatchNorm2d(128)
         self.relu3_3 = nn.ReLU(inplace=True)
         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/8
 
         # conv4
-        self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
-        self.batch4_1 = nn.BatchNorm2d(512)
+        self.conv4_1 = nn.Conv2d(128, 256, 3, padding=1)
+        self.batch4_1 = nn.BatchNorm2d(256)
         self.relu4_1 = nn.ReLU(inplace=True)
-        self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.batch4_2 = nn.BatchNorm2d(512)
+        self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch4_2 = nn.BatchNorm2d(256)
         self.relu4_2 = nn.ReLU(inplace=True)
-        self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
-        self.batch4_3 = nn.BatchNorm2d(512)
+        self.conv4_3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch4_3 = nn.BatchNorm2d(256)
         self.relu4_3 = nn.ReLU(inplace=True)
         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/16
         # conv5
-        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
-        self.batch5_1 = nn.BatchNorm2d(512)
+        self.conv5_1 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch5_1 = nn.BatchNorm2d(256)
         self.relu5_1 = nn.ReLU(inplace=True)
-        self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.batch5_2 = nn.BatchNorm2d(512)
+        self.conv5_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.batch5_2 = nn.BatchNorm2d(256)
         self.relu5_2 = nn.ReLU(inplace=True)
-        self.conv5_3 = nn.Conv2d(512, 512, 3)
-        self.batch5_3 = nn.BatchNorm2d(512)
+        self.conv5_3 = nn.Conv2d(256, 256, 3)
+        self.batch5_3 = nn.BatchNorm2d(256)
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
         # fc6
-        self.fc6 = nn.Conv2d(512, 4096, 7, padding=3)
+        self.fc6 = nn.Conv2d(256, 2048, 7, padding=3)
         self.relu6 = nn.ReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
         # fc7
-        self.fc7 = nn.Conv2d(4096, 4096, 1)
+        self.fc7 = nn.Conv2d(2048, 2048, 1)
         self.relu7 = nn.ReLU(inplace=True)
         self.drop7 = nn.Dropout2d()
 
-        self.score_fr = nn.Conv2d(4096, n_class, 1)
+        self.score_fr = nn.Conv2d(2048, n_class, 1)
         self.upscore = nn.ConvTranspose2d(n_class, n_class, 64, stride=32, bias=False)
         #self.upscore = nn.UpsamplingBilinear2d(scale_factor=2)
 
@@ -155,7 +152,7 @@ class FCN32s2(nn.Module):
 
     def forward(self, x):
         h = x
-        h = self.relu1_1(self.batch1_1(self.conv1_1(h)))        
+        h = self.relu1_1(self.batch1_1(self.conv1_1(h)))
         h = self.relu1_2(self.batch1_2(self.conv1_2(h)))
         h = self.pool1(h)
 
@@ -239,28 +236,6 @@ def intersectionAndUnion(pred, lab, numClass):
     return (area_intersection, area_union)
 
 
-def fp_video(net, device, dl):
-    # NB: Asserts a batch size of 1 atm
-    net.eval()
-    with torch.no_grad():
-        t = time.time()
-        for batch_idx, (data, target, name) in enumerate(dl):
-            data = data.to(device)
-            output = net(data)
-            name = str(name).split("'")[1]
-            print(name)
-            for i in range(len(output)):
-                out = utility.output_labels_to_image(output[i].cpu())
-                out = cv2.normalize(out, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
-                out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
-                img = data[i].cpu().numpy().transpose((1, 2, 0))
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                img = cv2.normalize(img, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
-                cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
-                cv2.imwrite('images/' + str(name) + '.png', out)
-        print(time.time()-t)
-
-
 def test(net, criterion, device, val, save, pre):
     net.eval()
     test_loss = 0
@@ -271,9 +246,7 @@ def test(net, criterion, device, val, save, pre):
         imgname = 1
         for data, target in val:
             data, target = data.to(device), target.to(device)
-            t = time.time()
             output = net(data)
-            print(time.time() - t)
             test_loss += criterion(output, target).item()  # sum up batch loss
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
             pred = torch.squeeze(pred)
@@ -312,26 +285,26 @@ def test(net, criterion, device, val, save, pre):
     return 100. * correct / (len(val.dataset)*128*256)
 
 
-def load_images():
-    pass
-
-
-def single_pass(net, device, train):
+def fp_video(net, device, dl):
+    # NB: Asserts a batch size of 1 atm
     net.eval()
     with torch.no_grad():
-        for batch_idx, (data, target) in enumerate(train):
-            # Move the input and target data on the GPU
-            data, target = data.to(device), target.to(device)
-            # Forward pass of the neural net
+        t = time.time()
+        for batch_idx, (data, target, name) in enumerate(dl):
+            data = data.to(device)
             output = net(data)
-            for t in target:
-                result = utility.labels_to_image(t)
-                plt.imshow(result)
-                plt.show()
-            for r in output:
-                res2 = utility.output_labels_to_image(r.cpu())
-                plt.imshow(res2)
-                plt.show()
+            name = str(name).split("'")[1]
+            print(name)
+            for i in range(len(output)):
+                out = utility.output_labels_to_image(output[i].cpu())
+                out = cv2.normalize(out, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
+                img = data[i].cpu().numpy().transpose((1, 2, 0))
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                img = cv2.normalize(img, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+                cv2.imwrite('images/' + str(name) + '.png', out)
+        print(time.time()-t)
 
 
 def main():
@@ -340,24 +313,26 @@ def main():
     ])
 
     device = 'cuda'
-    net = FCN32s2()
+    net = FCN32s()
     net = net.to(device)
     net = torch.nn.DataParallel(net)
 
     # ts = ImageSet(1)
     # vs = ImageSet(2, False)
+    # # tts = ImageSet(3, False)
+    # dl = DataLoader(ts, batch_size=24)
+    # vl = DataLoader(vs, batch_size=1)
+    # tl = DataLoader(tts, batch_size=12)
+
     testset = ImageSet(0, False, True)
     # tts = ImageSet(3, False)
     # dl = DataLoader(ts, batch_size=24)
     # vl = DataLoader(vs, batch_size=1)
     testloader = DataLoader(testset, batch_size=1)
-    # tl = DataLoader(tts, batch_size=12)
+    # single_pass(net, device, vl)
 
-    #single_pass(net, device, vl)
-
-    #criterion = nn.NLLLoss2d()
-    net.load_state_dict(torch.load('snapshots/snapshot_15.pt'))
-    fp_video(net, device, testloader)
+    # criterion = nn.NLLLoss2d()
+    net.load_state_dict(torch.load('snapshots/snapshot_26.pt'))
     criterion = CrossEntropyLoss2d()
     # optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
     # accuracy = []
@@ -366,11 +341,12 @@ def main():
     #     a = test(net, criterion, device, vl, False, 'v')
     #     torch.save(net.state_dict(), '/mnt/disks/data/d4dl/snapshots/snapshot_' + str(e) + '.pt')
     #     accuracy.append(a)
-    #torch.save(dict, 'snapshots/snapshot.pt')
+    # torch.save(dict, 'snapshots/snapshot.pt')
     # plt.plot(accuracy, range(len(accuracy)))
     # plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
-    # test(net, criterion, device, vl, True, 'v')
+    fp_video(net, device, testloader)
+    #test(net, criterion, device, vl, True, 'v')
     # test(net, criterion, device, tl, True, 't')
 
     # torch.save(net.state_dict(), 'snapshots/model.pt')
