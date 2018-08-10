@@ -133,7 +133,7 @@ class CameraPose(object):
         self.mat = []
         self.prop = None
         self.polygon = load_polygons('/home/novian/term2/dl4ad/repo2/d4dl/exercise4/polygons')
-        self.polygon_intersection = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]
+        self.polygon_intersection = [0,1,0,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,1,0,0]
         self.counter = 0
         self.poly_point_msg = None
         self.intrinsics = np.array(
@@ -180,6 +180,8 @@ class CameraPose(object):
         polygons = []
         lp = []
         lane = []
+        print(len(self.polygon))
+        polygon_file_counter = 0
         for polygon in self.polygon:
             projected = []
             cp = []
@@ -187,9 +189,9 @@ class CameraPose(object):
             for i, r in polygon.iterrows():
                 coords = np.array([[r.x], [r.y], [r.z], [1]])
                 coords = np.matmul(extrinsics, coords)
-                #self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                self.add_point_marker(self.poly_point_msg, r.x, r.y)
                 if coords[2][0] > 0.00001:
-                    self.add_point_marker(self.poly_point_msg, r.x, r.y)
+                    #self.add_point_marker(self.poly_point_msg, r.x, r.y)
                     coords = np.matmul(self.intrinsics, coords)
                     coords = [(coords[0][0]) / (coords[2][0]), (coords[1][0]) / (coords[2][0])]
                     coords = np.round(coords).astype(np.int32)
@@ -205,13 +207,14 @@ class CameraPose(object):
                 poly_forcheck = mplPath.Path(projected)
                 lb = poly_forcheck.contains_point((0,1280)) # left bottom
                 cb = poly_forcheck.contains_point((1300,1280)) # (almost) center bottom
-                if lb and cb :
-                    # wide polygon = intersection
+                if self.polygon_intersection[polygon_file_counter]==1 :
+                    # polygon file of intersection
                     lane_class = 2
                 elif not lb and cb :
                     # only in center = our lane
                     lane_class = 1
                 lane.append(lane_class)
+            polygon_file_counter = polygon_file_counter + 1
         return polygons, lane
 
     def _build_label_image(self, shape, polygons, path):
@@ -240,8 +243,8 @@ class CameraPose(object):
                 cv2.fillPoly(label_3c, [polygons[idx]], (255, 0, 0))
             else:
                 #intersection, green
-                cv2.fillPoly(img, [polygons[idx]], (255,0, 0))
-                cv2.fillPoly(label_3c, [polygons[idx]], (255, 0, 0))
+                cv2.fillPoly(img, [polygons[idx]], (0, 255, 0))
+                cv2.fillPoly(label_3c, [polygons[idx]], (0, 255, 0))
 
             # one-class label
             cv2.fillPoly(label_1c, [polygons[idx]], (0, 255, 0))
@@ -254,7 +257,7 @@ class CameraPose(object):
         #cv2.imwrite(os.path.join(path, labename_1c), label_1c)
         #cv2.imwrite(os.path.join(path, labename_3c), label_3c)
         # Need to convert to labelimage, and not just ground truth (function already implemented in utility.py)
-        print self.counter
+        #print self.counter
         return out, label_1c, label_3c
 
     def callback_camera(self, img):
@@ -274,8 +277,10 @@ class CameraPose(object):
             #cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-234/', namefile), image_np)
 
             namefile_res = '{:03d}{}'.format(self.num, '_out.png')
-            image_res = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images2/',namefile_res))
-            image_res2 = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images/',namefile_res))
+
+            #just for showcase, showing result images in rviz
+            #image_res = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images2/',namefile_res))
+            #image_res2 = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images/',namefile_res))
             #print("saving " + namefile)
 
         mtr = []
@@ -310,8 +315,9 @@ class CameraPose(object):
             #publish seen points of polygons to rviz
             self.point_pub.publish(self.poly_point_msg)
 
-        self.publish_image(self.res_pub, image_res)
-        self.publish_image(self.res2_pub, image_res2)
+        #just for showcase, showing result images in rviz
+        #self.publish_image(self.res_pub, image_res)
+        #self.publish_image(self.res2_pub, image_res2)
 
         self.poly_point_msg.points = []
         #self.mat.append(mtr)
