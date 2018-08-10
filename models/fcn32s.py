@@ -67,7 +67,7 @@ class CrossEntropyLoss2d(nn.Module):
 
 
 class FCN32s(nn.Module):
-    def __init__(self, n_class=3):
+    def __init__(self, n_class=4):
         super(FCN32s, self).__init__()
         # conv1
         self.conv1_1 = nn.Conv2d(3, 32, 3, padding=1)
@@ -121,16 +121,16 @@ class FCN32s(nn.Module):
         self.relu5_3 = nn.ReLU(inplace=True)
         self.pool5 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/32
         # fc6
-        self.fc6 = nn.Conv2d(256, 2048, 7, padding=3)
+        self.fc6 = nn.Conv2d(256, 256, 7, padding=3)
         self.relu6 = nn.ReLU(inplace=True)
         self.drop6 = nn.Dropout2d()
 
         # fc7
-        self.fc7 = nn.Conv2d(2048, 2048, 1)
+        self.fc7 = nn.Conv2d(256, 256, 1)
         self.relu7 = nn.ReLU(inplace=True)
         self.drop7 = nn.Dropout2d()
 
-        self.score_fr = nn.Conv2d(2048, n_class, 1)
+        self.score_fr = nn.Conv2d(256, n_class, 1)
         self.upscore = nn.ConvTranspose2d(n_class, n_class, 64, stride=32, bias=False)
         #self.upscore = nn.UpsamplingBilinear2d(scale_factor=2)
 
@@ -200,6 +200,7 @@ def train(epoch, net, optimizer, criterion, device, train):
         # Forward pass of the neural net
         output = net(data)
         # Calculation of the loss function
+        # print(output)
         loss = criterion(output, target)
         #loss = cross_entropy2d(output, target.squeeze()) #2D version
         # Backward pass (gradient computation)
@@ -210,6 +211,7 @@ def train(epoch, net, optimizer, criterion, device, train):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train.dataset),
                 100. * batch_idx / len(train), loss.item()))
+    return
 
 
 # https://github.com/CSAILVision/semantic-segmentation-pytorch/blob/master/utils.py
@@ -294,16 +296,16 @@ def fp_video(net, device, dl):
             data = data.to(device)
             output = net(data)
             name = str(name).split("'")[1]
-            print(name)
+            #print(name)
             for i in range(len(output)):
                 out = utility.output_labels_to_image(output[i].cpu())
                 out = cv2.normalize(out, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
                 out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
-                img = data[i].cpu().numpy().transpose((1, 2, 0))
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                img = cv2.normalize(img, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
-                cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
-                cv2.imwrite('images/' + str(name) + '.png', out)
+                #img = data[i].cpu().numpy().transpose((1, 2, 0))
+                #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                #img = cv2.normalize(img, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+                #cv2.addWeighted(img, 0.7, out, 0.3, 0, out)
+                #cv2.imwrite('images/' + str(name) + '.png', out)
         print(time.time()-t)
 
 
@@ -317,36 +319,37 @@ def main():
     net = net.to(device)
     net = torch.nn.DataParallel(net)
 
-    # ts = ImageSet(1)
-    # vs = ImageSet(2, False)
+    ts = ImageSet(1)
+    vs = ImageSet(2, False)
     # # tts = ImageSet(3, False)
-    # dl = DataLoader(ts, batch_size=24)
-    # vl = DataLoader(vs, batch_size=1)
+    dl = DataLoader(ts, batch_size=1)
+    vl = DataLoader(vs, batch_size=1)
     # tl = DataLoader(tts, batch_size=12)
 
-    testset = ImageSet(0, False, True)
+    #testset = ImageSet(0, False, True)
     # tts = ImageSet(3, False)
     # dl = DataLoader(ts, batch_size=24)
     # vl = DataLoader(vs, batch_size=1)
-    testloader = DataLoader(testset, batch_size=1)
+    #testloader = DataLoader(testset, batch_size=1)
     # single_pass(net, device, vl)
 
     # criterion = nn.NLLLoss2d()
-    net.load_state_dict(torch.load('snapshots/snapshot_26.pt'))
-    criterion = CrossEntropyLoss2d()
-    # optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
-    # accuracy = []
-    # for e in range(1, 100):
-    #     train(e, net, optimizer, criterion, device, dl)
-    #     a = test(net, criterion, device, vl, False, 'v')
-    #     torch.save(net.state_dict(), '/mnt/disks/data/d4dl/snapshots/snapshot_' + str(e) + '.pt')
-    #     accuracy.append(a)
+    #net.load_state_dict(torch.load('/home/habibien/AADC2018/modelsave/snapshot_10.pt'))
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
+    accuracy = []
+    for e in range(1, 10):
+        train(e, net, optimizer, criterion, device, dl)
+        a = test(net, criterion, device, vl, False, 'v')
+        torch.save(net.state_dict(), '/home/habibien/AADC2018/modelsave/snapshotnew_' + str(e) + '.pt')
+        accuracy.append(a)
+        print("epoch "+str(e)+" done")
     # torch.save(dict, 'snapshots/snapshot.pt')
     # plt.plot(accuracy, range(len(accuracy)))
     # plt.savefig('images/plot.png')
     # test(net, criterion, device, dl, True, 'd')
-    fp_video(net, device, testloader)
-    #test(net, criterion, device, vl, True, 'v')
+    # fp_video(net, device, testloader)
+    # test(net, criterion, device, vl, True, 'v')
     # test(net, criterion, device, tl, True, 't')
 
     # torch.save(net.state_dict(), 'snapshots/model.pt')

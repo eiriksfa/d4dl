@@ -101,10 +101,10 @@ class ImageSet(Dataset):
 
     def _build_dataset(self):
         if not self.t:
-            engine = sa.create_engine('sqlite:///cardata_1.db')  #
+            engine = sa.create_engine('sqlite:///data-orilabel.db')  #
             self.data = utility.get_imageset(engine, self.itype)
         else:
-            self.data = [d for d in Path('E:/testimages').iterdir()]
+            self.data = [d for d in Path('/opt/dataset-raw/').iterdir()]
 
     def __len__(self):
         return len(self.data)

@@ -1,6 +1,6 @@
-import models.fcn32s2
+import models.fcn32s
 
 if __name__ == '__main__':
-    models.fcn32s2.main()
+    models.fcn32s.main()
 
 
