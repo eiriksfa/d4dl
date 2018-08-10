@@ -123,6 +123,7 @@ class CameraPose(object):
         self.tf_listener = tf.TransformListener()
         self.img_pub = rospy.Publisher('output_2/image/compressed', CompressedImage, queue_size=10)
         self.res_pub = rospy.Publisher('output_3/image/compressed', CompressedImage, queue_size=10)
+        self.res2_pub = rospy.Publisher('output_4/image/compressed', CompressedImage, queue_size=10)
         self.point_pub = rospy.Publisher('polygon_point', Marker, queue_size=10)
         self.num = 0
         self.broken_amt = 0
@@ -132,6 +133,7 @@ class CameraPose(object):
         self.mat = []
         self.prop = None
         self.polygon = load_polygons('/home/novian/term2/dl4ad/repo2/d4dl/exercise4/polygons')
+        self.polygon_intersection = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]
         self.counter = 0
         self.poly_point_msg = None
         self.intrinsics = np.array(
@@ -238,8 +240,8 @@ class CameraPose(object):
                 cv2.fillPoly(label_3c, [polygons[idx]], (255, 0, 0))
             else:
                 #intersection, green
-                cv2.fillPoly(img, [polygons[idx]], (0, 255, 0))
-                cv2.fillPoly(label_3c, [polygons[idx]], (0, 255, 0))
+                cv2.fillPoly(img, [polygons[idx]], (255,0, 0))
+                cv2.fillPoly(label_3c, [polygons[idx]], (255, 0, 0))
 
             # one-class label
             cv2.fillPoly(label_1c, [polygons[idx]], (0, 255, 0))
@@ -272,7 +274,8 @@ class CameraPose(object):
             #cv2.imwrite(os.path.join('/home/novian/catkin_ws/src/bagfile/raw-234/', namefile), image_np)
 
             namefile_res = '{:03d}{}'.format(self.num, '_out.png')
-            image_res = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images/',namefile_res))
+            image_res = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images2/',namefile_res))
+            image_res2 = cv2.imread(os.path.join('/media/novian/TOSHIBA EXT/images/',namefile_res))
             #print("saving " + namefile)
 
         mtr = []
@@ -308,6 +311,7 @@ class CameraPose(object):
             self.point_pub.publish(self.poly_point_msg)
 
         self.publish_image(self.res_pub, image_res)
+        self.publish_image(self.res2_pub, image_res2)
 
         self.poly_point_msg.points = []
         #self.mat.append(mtr)
